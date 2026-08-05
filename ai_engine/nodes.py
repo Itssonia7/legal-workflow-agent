@@ -27,23 +27,19 @@ def drafter_agent(state: AgentState):
     context_documents = state["context_documents"]
     critic_feedback = state.get("critic_feedback", "")
 
-    # 1. Build the prompt using the context from the Researcher
     prompt_text = f"""You are an expert legal drafter. 
 Task: {user_prompt}
 Precedents/Facts to include: {context_documents}
 """
     
-    # 2. If the Critic rejected a previous draft, force the Drafter to fix it
     if critic_feedback:
         prompt_text += f"\nRevisions required by Critic: {critic_feedback}"
 
     prompt_text += "\nWrite the legal document draft now. Keep it brief for this test."
 
-    # 3. Generate the document
     response = llm.invoke([HumanMessage(content=prompt_text)])
     print("[✍️ Drafter Agent] Draft generated successfully.")
     
-    # 4. Return the new draft and increment the revision counter
     new_count = state.get("revision_count", 0) + 1
     return {
         "current_draft": response.content, 
@@ -51,9 +47,35 @@ Precedents/Facts to include: {context_documents}
     }
 
 
+def critic_agent(state: AgentState):
+    print("\n[🧐 Critic Agent] Evaluating the draft...")
+    user_prompt = state["user_prompt"]
+    current_draft = state["current_draft"]
+
+    # 1. Prompt the Critic to act as a strict reviewer
+    prompt_text = f"""You are a strict senior legal partner reviewing a junior's draft.
+Original Request: {user_prompt}
+Current Draft: {current_draft}
+
+If the draft is perfect and meets all requirements, respond exactly with the word "APPROVED".
+If it needs work, respond with "REJECTED:" followed by a short instruction on what to fix.
+"""
+    
+    # 2. Get the evaluation
+    response = llm.invoke([HumanMessage(content=prompt_text)])
+    evaluation = response.content.strip()
+
+    # 3. Parse the evaluation to update the LangGraph state
+    if evaluation.startswith("APPROVED"):
+        print("[✅ Critic Agent] Draft approved!")
+        return {"is_approved": True, "critic_feedback": ""}
+    else:
+        print(f"[❌ Critic Agent] Draft rejected. Feedback: {evaluation}")
+        return {"is_approved": False, "critic_feedback": evaluation}
+
+
 # --- Quick Local Test ---
 if __name__ == "__main__":
-    # 1. Initial State
     test_state = AgentState(
         user_prompt="Draft a brief 2-sentence bail application for a non-bailable offense.",
         context_documents="",
@@ -63,13 +85,19 @@ if __name__ == "__main__":
         is_approved=False
     )
     
-    # 2. Run Researcher and update state
+    # Run Researcher
     research_update = research_agent(test_state)
     test_state.update(research_update)
     
-    # 3. Run Drafter and update state
+    # Run Drafter
     draft_update = drafter_agent(test_state)
     test_state.update(draft_update)
     
-    print("\n--- Final Draft Output ---")
-    print(test_state["current_draft"])
+    # Run Critic
+    critic_update = critic_agent(test_state)
+    test_state.update(critic_update)
+    
+    print(f"\n--- Final Status ---")
+    print(f"Approved: {test_state['is_approved']}")
+    if not test_state['is_approved']:
+        print(f"Feedback to fix next round: {test_state['critic_feedback']}")

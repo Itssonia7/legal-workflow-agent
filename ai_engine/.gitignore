@@ -1,0 +1,3 @@
+# Ignore local vector database and test documents
+chroma_db/
+*.pdf

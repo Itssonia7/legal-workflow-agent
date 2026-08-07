@@ -20,14 +20,20 @@ def process_legal_document(pdf_path):
     chunks = text_splitter.split_documents(documents)
     print(f"Successfully split into {len(chunks)} chunks.")
     
+    import chromadb
+
     # Task 3: Generate embeddings and save to ChromaDB
     print("Generating embeddings and saving to ChromaDB...")
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    
+
+    # Explicitly create a Chroma client to prevent Python 3.13 config parsing errors
+    client = chromadb.PersistentClient(path="./chroma_db")
+
     vector_store = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
-        persist_directory="./chroma_db"
+        client=client,
+        collection_name="legal_collection",
     )
     
     print("Ingestion complete! Vectors stored in ./chroma_db")

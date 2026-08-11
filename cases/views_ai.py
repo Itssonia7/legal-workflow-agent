@@ -85,8 +85,8 @@ class AIDraftGeneratorView(views.APIView):
         }
 
         try:
-            # Execute the LangGraph loop (limit depth to 5 steps to avoid infinite loops)
-            result = ai_app.invoke(initial_state, config={"recursion_limit": 5})
+            # Execute the LangGraph loop (limit depth to 20 steps to allow enough drafting cycles)
+            result = ai_app.invoke(initial_state, config={"recursion_limit": 20})
             
             return Response({
                 "user_prompt": result.get("user_prompt"),

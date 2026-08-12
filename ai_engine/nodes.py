@@ -1,6 +1,7 @@
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 from state import AgentState
+from retrieve import search_legal_documents
 
 # Initialize the local AI 
 llm = ChatOllama(model="llama3", temperature=0.0)
@@ -15,10 +16,12 @@ def research_agent(state: AgentState):
     search_terms = response.content
     print(f"[🔍 Researcher Agent] Keywords extracted: {search_terms}")
     
-    print("[📚 Researcher Agent] Querying ChromaDB (Simulated)...")
-    mock_context = f"Relevant precedents and statutes found regarding: {search_terms}."
+        # Query real ChromaDB using your function
+    print("[📚 Researcher Agent] Querying ChromaDB (Real)...")
+    real_results = search_legal_documents(search_terms)
+    context = "\n\n".join([doc.page_content for doc in real_results])
     
-    return {"context_documents": mock_context}
+    return {"context_documents": context}
 
 
 def drafter_agent(state: AgentState):

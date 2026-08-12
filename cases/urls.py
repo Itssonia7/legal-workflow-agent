@@ -16,7 +16,7 @@ router.register(r'documents', LegalDocumentViewSet, basename='document')
 from .views_ai import DocumentUploadAndIngestView, AIDraftGeneratorView
 
 urlpatterns = [
+    path('documents/upload/', DocumentUploadAndIngestView.as_view(), name='document-upload'), # Match specific path first!
     path('', include(router.urls)),
-    path('documents/upload/', DocumentUploadAndIngestView.as_view(), name='document-upload'),
     path('draft/', AIDraftGeneratorView.as_view(), name='ai-draft'),
 ]

@@ -26,8 +26,11 @@ def process_legal_document(pdf_path):
     print("Generating embeddings and saving to ChromaDB...")
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-    # Explicitly create a Chroma client to prevent Python 3.13 config parsing errors
-    client = chromadb.PersistentClient(path="./chroma_db")
+# Explicitly create a Chroma client to prevent Python 3.13 config parsing errors
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DB_PATH = os.path.join(BASE_DIR, "chroma_db")
+
+    client = chromadb.PersistentClient(path=DB_PATH)
 
     vector_store = Chroma.from_documents(
         documents=chunks,

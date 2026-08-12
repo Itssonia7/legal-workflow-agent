@@ -55,7 +55,7 @@ class DocumentUploadAndIngestView(views.APIView):
                 )
 
         serializer = LegalDocumentSerializer(doc)
-        return Response(serializer.data, status=status.HTTP_210_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class AIDraftGeneratorView(views.APIView):
     """

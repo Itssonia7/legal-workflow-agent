@@ -26,10 +26,10 @@ if __name__ == "__main__":
     # Simply uncomment the question you want to test!
 
     # Test 1: Timelines
-    # question = "What is the time limit for providing information concerning life or liberty?"
+    question = "What is the time limit for providing information concerning life or liberty?"
 
     # Test 2: Exemptions
-    question = "Are there any exemptions under the RTI Act?"
+    # question = "Are there any exemptions under the RTI Act?"
 
     # Test 3: Anti-Hallucination
     # question = "What is the recipe for a chocolate cake?"

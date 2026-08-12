@@ -1,10 +1,18 @@
 import chromadb
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+import os
+
 
 # Load model and connect to database
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-client = chromadb.PersistentClient(path="./chroma_db")
+embeddings = HuggingFaceEmbeddings(
+    model_name="all-MiniLM-L6-v2",
+    model_kwargs={'device': 'cpu'}
+)
+# Resolve the absolute path to the database folder
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "chroma_db")
+client = chromadb.PersistentClient(path=DB_PATH)
 vector_store = Chroma(
     client=client,
     collection_name="legal_collection",

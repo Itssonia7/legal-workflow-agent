@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, List
 
 class AgentState(TypedDict):
     """
@@ -11,3 +11,4 @@ class AgentState(TypedDict):
     critic_feedback: str     # Notes from the Critic agent if the draft has errors
     revision_count: int      # To ensure the agents don't get stuck in an infinite loop
     is_approved: bool        # Becomes True when the Critic is finally satisfied
+    step_logs: List[str]     # New: A list to store progress updates for the frontend UI

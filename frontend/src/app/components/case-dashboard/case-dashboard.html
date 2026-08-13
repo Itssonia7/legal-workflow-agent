@@ -1,1 +1,98 @@
-<p>case-dashboard works!</p>
+<!-- Case Management Dashboard Wireframe -->
+<div class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- Page Header -->
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Case Management Dashboard</h1>
+      <p class="mt-1 text-sm text-gray-500">Overview of all active, pending, and closed cases</p>
+    </div>
+    <button
+      class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+      + New Case
+    </button>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Open Cases</p>
+      <p class="mt-2 text-4xl font-bold text-blue-600">12</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Pending</p>
+      <p class="mt-2 text-4xl font-bold text-yellow-500">5</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Closed</p>
+      <p class="mt-2 text-4xl font-bold text-gray-400">8</p>
+    </div>
+  </div>
+
+  <!-- Case Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-base font-semibold text-gray-700">All Cases</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <tr>
+          <th class="px-6 py-3 text-left">Case Title</th>
+          <th class="px-6 py-3 text-left">Client</th>
+          <th class="px-6 py-3 text-left">Type</th>
+          <th class="px-6 py-3 text-left">Status</th>
+          <th class="px-6 py-3 text-left">Lawyer</th>
+          <th class="px-6 py-3 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <!-- Row 1 -->
+        <tr class="hover:bg-blue-50 transition-colors">
+          <td class="px-6 py-4 font-medium text-gray-900">Johnson v. Smith — Property Dispute</td>
+          <td class="px-6 py-4 text-gray-600">Alice Johnson</td>
+          <td class="px-6 py-4 text-gray-500">Civil</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+              Open
+            </span>
+          </td>
+          <td class="px-6 py-4 text-gray-600">demo_lawyer</td>
+          <td class="px-6 py-4">
+            <a href="#" class="text-blue-600 hover:underline text-xs font-medium">View</a>
+          </td>
+        </tr>
+        <!-- Row 2 -->
+        <tr class="hover:bg-blue-50 transition-colors">
+          <td class="px-6 py-4 font-medium text-gray-900">Martinez — DUI Defence</td>
+          <td class="px-6 py-4 text-gray-600">Bob Martinez</td>
+          <td class="px-6 py-4 text-gray-500">Criminal</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+              Pending
+            </span>
+          </td>
+          <td class="px-6 py-4 text-gray-600">demo_lawyer</td>
+          <td class="px-6 py-4">
+            <a href="#" class="text-blue-600 hover:underline text-xs font-medium">View</a>
+          </td>
+        </tr>
+        <!-- Row 3 -->
+        <tr class="hover:bg-blue-50 transition-colors">
+          <td class="px-6 py-4 font-medium text-gray-900">Johnson — Workplace Injury Claim</td>
+          <td class="px-6 py-4 text-gray-600">Alice Johnson</td>
+          <td class="px-6 py-4 text-gray-500">Personal Injury</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+              Closed
+            </span>
+          </td>
+          <td class="px-6 py-4 text-gray-600">demo_lawyer</td>
+          <td class="px-6 py-4">
+            <a href="#" class="text-blue-600 hover:underline text-xs font-medium">View</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>

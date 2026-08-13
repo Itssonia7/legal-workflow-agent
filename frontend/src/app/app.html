@@ -1,4 +1,22 @@
-<div class="p-10">
-  <h1 class="text-4xl font-bold text-blue-600">Legal Workflow Agent</h1>
-  <p class="mt-4 text-gray-700">UI Shell Initialized. Components are ready in the folder!</p>
-</div>
+<!-- Navigation Shell -->
+<nav class="bg-blue-700 text-white shadow-lg">
+  <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+    <span class="text-xl font-bold tracking-wide">Legal Workflow Agent</span>
+    <div class="flex gap-6 text-sm font-medium">
+      <a routerLink="/" routerLinkActive="underline underline-offset-4"
+         [routerLinkActiveOptions]="{exact: true}"
+         class="hover:text-blue-200 transition-colors">
+        Case Dashboard
+      </a>
+      <a routerLink="/calendar" routerLinkActive="underline underline-offset-4"
+         class="hover:text-blue-200 transition-colors">
+        Hearing Calendar
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- Routed Page Content -->
+<main class="min-h-screen bg-gray-50">
+  <router-outlet></router-outlet>
+</main>

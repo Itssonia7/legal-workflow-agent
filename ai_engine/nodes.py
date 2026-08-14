@@ -7,23 +7,37 @@ from retrieve import search_legal_documents
 llm = ChatOllama(model="llama3", temperature=0.0)
 
 def research_agent(state: AgentState):
-    print("\n[🤖 Researcher Agent] Analyzing case prompt...")
+    print("\n[🤖 Researcher Agent] Analyzing case prompt for dual-search...")
     user_prompt = state["user_prompt"]
     logs = state.get("step_logs", [])
     
     instruction = f"You are a legal assistant. Extract 3 core legal search terms from this prompt. Return ONLY the terms separated by commas: '{user_prompt}'"
     response = llm.invoke([HumanMessage(content=instruction)])
-    
     search_terms = response.content
     print(f"[🔍 Researcher Agent] Keywords extracted: {search_terms}")
     logs.append(f"Researcher extracted keywords: {search_terms}")
     
-    print("[📚 Researcher Agent] Querying ChromaDB (Real)...")
-    real_results = search_legal_documents(search_terms)
-    context = "\n\n".join([doc.page_content for doc in real_results])
-    logs.append("Researcher successfully retrieved relevant legal precedents from the vault.")
+    # 1. Query Drawer A: Objective Statutes (The laws we just seeded)
+    print("[📚 Researcher] Querying Drawer A (Statutes)...")
+    statute_results = search_legal_documents(search_terms, source_type="statute")
+    statute_context = "\n\n".join(statute_results)
     
-    return {"context_documents": context, "step_logs": logs}
+    # 2. Query Drawer B: Client Case Files
+    # (This will safely return nothing until your team builds the frontend upload UI)
+    print("[📂 Researcher] Querying Drawer B (Case Files)...")
+    case_results = search_legal_documents(search_terms, source_type="case_file")
+    case_context = "\n\n".join(case_results)
+    
+    # 3. Combine them cleanly with strict boundaries
+    combined_context = (
+        "--- LEGAL STATUTES (OBJECTIVE FACT) ---\n"
+        f"{statute_context if statute_context else 'No statutory provisions found.'}\n\n"
+        "--- CLIENT CASE FACTS (UPLOADED EVIDENCE) ---\n"
+        f"{case_context if case_context else 'No case file facts uploaded yet.'}"
+    )
+    
+    logs.append("Researcher successfully retrieved segregated laws and case facts.")
+    return {"context_documents": combined_context, "step_logs": logs}
 
 
 def drafter_agent(state: AgentState):

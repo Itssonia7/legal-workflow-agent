@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { CaseDashboard } from './components/case-dashboard/case-dashboard';
 import { DocumentVault } from './components/document-vault/document-vault';
 import { Calendar } from './components/calendar/calendar';
+import { DraftingStudio } from './components/drafting-studio/drafting-studio';
 import { AuthService } from './services/auth.service';
 import { LegalService } from './services/legal.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule, CaseDashboard, DocumentVault, Calendar],
+  imports: [CommonModule, FormsModule, CaseDashboard, DocumentVault, Calendar, DraftingStudio],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -23,11 +24,6 @@ export class App implements OnInit {
   // Auth states
   isLoginMode = signal<boolean>(true);
   authData = { username: '', password: '', email: '', phone: '' };
-
-  // AI Drafting states
-  draftPrompt = '';
-  draftResult: any = null;
-  drafting = false;
 
   constructor(
     public authService: AuthService,
@@ -77,23 +73,5 @@ export class App implements OnInit {
   logout(): void {
     this.authService.logout();
     this.activeTab.set('dashboard');
-  }
-
-  // Trigger RAG Multi-Agent drafting workflow
-  generateLegalDraft(): void {
-    if (!this.draftPrompt.trim()) return;
-    this.drafting = true;
-    this.draftResult = null;
-
-    this.legalService.generateDraft(this.draftPrompt).subscribe({
-      next: (res) => {
-        this.draftResult = res;
-        this.drafting = false;
-      },
-      error: (err) => {
-        this.drafting = false;
-        alert('Drafting failed: ' + (err.error?.error || JSON.stringify(err.error)));
-      }
-    });
   }
 }

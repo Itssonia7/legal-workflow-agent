@@ -71,14 +71,21 @@
           </div>
           
           <!-- Event Card -->
-          <div class="bg-gray-50/50 hover:bg-gray-50 border border-gray-100 rounded-2xl p-5 transition space-y-2">
+          <div class="bg-gray-50/50 hover:bg-gray-50 border border-gray-100 rounded-2xl p-5 transition space-y-2"
+               [ngClass]="{'border-red-200 bg-red-50/10': s.collision_warning}">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
               <span class="text-xs font-bold text-indigo-600 tracking-wider uppercase">
                 {{ s.hearing_date | date:'medium' }}
               </span>
-              <span *ngIf="s.court_room" class="inline-block bg-indigo-50 text-indigo-600 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-100">
-                {{ s.court_room }}
-              </span>
+              <div class="flex items-center gap-2">
+                <!-- Collision Warning Badge -->
+                <span *ngIf="s.collision_warning" class="inline-block bg-rose-50 text-rose-600 text-xs px-2.5 py-1 rounded-full font-bold border border-rose-100 animate-pulse">
+                  ⚠️ Schedule Conflict
+                </span>
+                <span *ngIf="s.court_room" class="inline-block bg-indigo-50 text-indigo-600 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-100">
+                  {{ s.court_room }}
+                </span>
+              </div>
             </div>
             <h3 class="text-base font-bold text-gray-800">{{ s.case_title }}</h3>
             <p class="text-sm text-gray-600 leading-relaxed">{{ s.description || 'No description added for this hearing.' }}</p>

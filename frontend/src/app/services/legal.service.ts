@@ -67,7 +67,11 @@ export class LegalService {
   }
 
   // AI Multi-Agent RAG Drafting
-  generateDraft(prompt: string): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/draft/`, { user_prompt: prompt }, this.getHeaders());
+  generateDraft(prompt: string, caseFileId: number): Observable<any> {
+    return this.http.post<any>(
+      `${this.apiUrl}/draft/`, 
+      { user_prompt: prompt, case_file: caseFileId }, 
+      this.getHeaders()
+    );
   }
 }

@@ -44,7 +44,7 @@ class DocumentUploadAndIngestView(views.APIView):
         if os.path.exists(file_path):
             try:
                 print(f"[Backend] Triggering ChromaDB ingestion for: {file_path}")
-                process_legal_document(file_path)
+                process_legal_document(file_path, case_id)
                 doc.indexed = True
                 doc.save()
             except Exception as e:
@@ -66,6 +66,7 @@ class AIDraftGeneratorView(views.APIView):
 
     def post(self, request, *args, **kwargs):
         user_prompt = request.data.get('user_prompt')
+        case_id = request.data.get('case_file')
 
         if not user_prompt:
             return Response(
@@ -73,15 +74,19 @@ class AIDraftGeneratorView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        print(f"[Backend] Starting LangGraph multi-agent system with prompt: {user_prompt}")
+        case_file = get_object_or_404(CaseFile, id=case_id, lawyer=request.user) if case_id else None
+
+        print(f"[Backend] Starting LangGraph multi-agent system with prompt: {user_prompt} for Case ID: {case_id}")
 
         initial_state = {
             "user_prompt": user_prompt,
+            "case_id": str(case_file.id) if case_file else "",
             "context_documents": "",
             "current_draft": "",
             "critic_feedback": "",
             "revision_count": 0,
-            "is_approved": False
+            "is_approved": False,
+            "step_logs": []
         }
 
         try:
@@ -94,7 +99,8 @@ class AIDraftGeneratorView(views.APIView):
                 "current_draft": result.get("current_draft"),
                 "is_approved": result.get("is_approved"),
                 "revision_count": result.get("revision_count"),
-                "critic_feedback": result.get("critic_feedback")
+                "critic_feedback": result.get("critic_feedback"),
+                "step_logs": result.get("step_logs", [])
             }, status=status.HTTP_200_OK)
             
         except Exception as e:

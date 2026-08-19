@@ -39,6 +39,7 @@ class HearingSchedule(models.Model):
     hearing_date = models.DateTimeField()
     description = models.TextField(blank=True, default='')
     court_room = models.CharField(max_length=50, blank=True, default='')
+    collision_warning = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.case_file.title} on {self.hearing_date}"
@@ -52,3 +53,12 @@ class LegalDocument(models.Model):
 
     def __str__(self):
         return self.name
+
+# Signals to trigger Celery tasks
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=HearingSchedule)
+def trigger_collision_check(sender, instance, **kwargs):
+    from .tasks import check_hearing_schedule_collision
+    check_hearing_schedule_collision.delay(instance.id)

@@ -4,7 +4,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-def process_legal_document(pdf_path):
+def process_legal_document(pdf_path, case_id=None):
     print(f"Loading document: {pdf_path}...")
     
     # Task 1: Load the PDF
@@ -21,22 +21,41 @@ def process_legal_document(pdf_path):
     print(f"Successfully split into {len(chunks)} chunks.")
     
     import chromadb
+    from chromadb.utils import embedding_functions
 
-    # Task 3: Generate embeddings and save to ChromaDB
-    print("Generating embeddings and saving to ChromaDB...")
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-# Explicitly create a Chroma client to prevent Python 3.13 config parsing errors
+    # Task 3: Save to ChromaDB using native client
+    print("Saving to ChromaDB using native client...")
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DB_PATH = os.path.join(BASE_DIR, "chroma_db")
 
     client = chromadb.PersistentClient(path=DB_PATH)
-
-    vector_store = Chroma.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        client=client,
-        collection_name="legal_collection",
+    embedding_func = embedding_functions.DefaultEmbeddingFunction()
+    
+    collection = client.get_or_create_collection(
+        name="legal_knowledge_vault",
+        embedding_function=embedding_func
+    )
+    
+    # Prepare documents, metadatas, and ids
+    texts = [chunk.page_content for chunk in chunks]
+    
+    metadatas = []
+    for chunk in chunks:
+        meta = {
+            "source_type": "case_file",
+            "source_file": os.path.basename(pdf_path)
+        }
+        if case_id:
+            meta["case_id"] = str(case_id)
+        metadatas.append(meta)
+        
+    ids = [f"doc_{os.path.basename(pdf_path)}_{i}" for i in range(len(chunks))]
+    
+    # Add directly to native ChromaDB collection
+    collection.add(
+        documents=texts,
+        metadatas=metadatas,
+        ids=ids
     )
     
     print("Ingestion complete! Vectors stored in ./chroma_db")

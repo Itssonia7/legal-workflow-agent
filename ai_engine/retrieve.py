@@ -1,50 +1,48 @@
-import chromadb
-from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 import os
+import chromadb
+from chromadb.utils import embedding_functions
 
-
-# Load model and connect to database
-embeddings = HuggingFaceEmbeddings(
-    model_name="all-MiniLM-L6-v2",
-    model_kwargs={'device': 'cpu'}
-)
-# Resolve the absolute path to the database folder
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "chroma_db")
-client = chromadb.PersistentClient(path=DB_PATH)
-vector_store = Chroma(
-    client=client,
-    collection_name="legal_collection",
-    embedding_function=embeddings
-)
-
-
-def search_legal_documents(query: str, k: int = 5) -> list:
+def search_legal_documents(query: str, source_type: str = None, case_id: str = None, k: int = 3):
     """
-    Search ChromaDB for legal text chunks relevant to the query.
-
-    Args:
-        query: Plain-English legal question
-        k: Number of matching chunks to return (default 5)
-
-    Returns:
-        List of document objects from ChromaDB
+    Searches the ChromaDB vector store.
+    If source_type is provided (e.g., 'statute' or 'case_file'), it filters the results.
     """
-    results = vector_store.similarity_search(query, k=k)
-    return results
-
-
-# --- Interactive mode (only runs when you execute this file directly) ---
-if __name__ == "__main__":
-    while True:
-        query = input("\nAsk a question about the RTI Act (or type 'exit' to quit): ")
-        if query.lower() == 'exit':
-            break
-
-        results = search_legal_documents(query)
-
-        print(f"\n--- Results for: '{query}' ---")
-        for i, doc in enumerate(results):
-            print(f"\n[Result {i+1}]")
-            print(doc.page_content[:500] + "...")
+    print(f"[🔍 Retrieval] Searching ChromaDB (Filter: {source_type}, Case: {case_id})...")
+    
+    # 1. Connect to the exact database we just seeded
+    db_path = os.path.join(os.path.dirname(__file__), "chroma_db")
+    client = chromadb.PersistentClient(path=db_path)
+    embedding_func = embedding_functions.DefaultEmbeddingFunction()
+    
+    collection = client.get_or_create_collection(
+        name="legal_knowledge_vault",
+        embedding_function=embedding_func
+    )
+    
+    # 2. Build the search parameters
+    search_kwargs = {
+        "query_texts": [query],
+        "n_results": k
+    }
+    
+    # 3. Apply the Metadata Filter if requested
+    if source_type:
+        if source_type == "case_file" and case_id:
+            search_kwargs["where"] = {
+                "$and": [
+                    {"source_type": "case_file"},
+                    {"case_id": str(case_id)}
+                ]
+            }
+        else:
+            search_kwargs["where"] = {"source_type": source_type}
+        
+    results = collection.query(**search_kwargs)
+    
+    # 4. Extract and return the raw text chunks
+    documents = []
+    if results['documents'] and len(results['documents']) > 0:
+        for doc_text in results['documents'][0]:
+            documents.append(doc_text)
+            
+    return documents

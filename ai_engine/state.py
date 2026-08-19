@@ -12,3 +12,4 @@ class AgentState(TypedDict):
     revision_count: int      # To ensure the agents don't get stuck in an infinite loop
     is_approved: bool        # Becomes True when the Critic is finally satisfied
     step_logs: List[str]     # New: A list to store progress updates for the frontend UI
+    case_id: str             # New: The active case file ID to isolate document context

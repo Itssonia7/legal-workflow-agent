@@ -2,12 +2,12 @@ import os
 import chromadb
 from chromadb.utils import embedding_functions
 
-def search_legal_documents(query: str, source_type: str = None, k: int = 3):
+def search_legal_documents(query: str, source_type: str = None, case_id: str = None, k: int = 3):
     """
     Searches the ChromaDB vector store.
     If source_type is provided (e.g., 'statute' or 'case_file'), it filters the results.
     """
-    print(f"[🔍 Retrieval] Searching ChromaDB (Filter: {source_type})...")
+    print(f"[🔍 Retrieval] Searching ChromaDB (Filter: {source_type}, Case: {case_id})...")
     
     # 1. Connect to the exact database we just seeded
     db_path = os.path.join(os.path.dirname(__file__), "chroma_db")
@@ -27,7 +27,15 @@ def search_legal_documents(query: str, source_type: str = None, k: int = 3):
     
     # 3. Apply the Metadata Filter if requested
     if source_type:
-        search_kwargs["where"] = {"source_type": source_type}
+        if source_type == "case_file" and case_id:
+            search_kwargs["where"] = {
+                "$and": [
+                    {"source_type": "case_file"},
+                    {"case_id": str(case_id)}
+                ]
+            }
+        else:
+            search_kwargs["where"] = {"source_type": source_type}
         
     results = collection.query(**search_kwargs)
     

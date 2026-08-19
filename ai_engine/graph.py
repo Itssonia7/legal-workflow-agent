@@ -10,12 +10,21 @@ from nodes import research_agent, drafter_agent, critic_agent
 def route_draft(state: AgentState):
     """
     This function acts as the traffic director after the Critic finishes.
-    If approved, we end the pipeline. If rejected, we send it back to the Drafter.
+    If approved or if we hit the maximum revision limit (3), we end the pipeline.
     """
-    if state.get("is_approved", False):
+    revision_count = state.get("revision_count", 0)
+    is_approved = state.get("is_approved", False)
+    logs = state.get("step_logs", [])
+    
+    if is_approved:
         return "approve"
-    else:
-        return "revise"
+    
+    if revision_count >= 3:
+        print("[⚠️ Route Director] Maximum revision attempts reached (3). Terminating loop with warnings.")
+        logs.append("Warning: Maximum revisions (3) reached without full Critic approval. Returning current draft.")
+        return "approve"
+        
+    return "revise"
 
 # 2. Initialize the LangGraph
 workflow = StateGraph(AgentState)

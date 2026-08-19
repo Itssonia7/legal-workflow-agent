@@ -9,6 +9,7 @@ llm = ChatOllama(model="llama3", temperature=0.0)
 def research_agent(state: AgentState):
     print("\n[🤖 Researcher Agent] Analyzing case prompt for dual-search...")
     user_prompt = state["user_prompt"]
+    case_id = state.get("case_id")
     logs = state.get("step_logs", [])
     
     instruction = f"You are a legal assistant. Extract 3 core legal search terms from this prompt. Return ONLY the terms separated by commas: '{user_prompt}'"
@@ -23,9 +24,8 @@ def research_agent(state: AgentState):
     statute_context = "\n\n".join(statute_results)
     
     # 2. Query Drawer B: Client Case Files
-    # (This will safely return nothing until your team builds the frontend upload UI)
-    print("[📂 Researcher] Querying Drawer B (Case Files)...")
-    case_results = search_legal_documents(search_terms, source_type="case_file")
+    print(f"[📂 Researcher] Querying Drawer B (Case Files) for Case ID: {case_id}...")
+    case_results = search_legal_documents(search_terms, source_type="case_file", case_id=case_id)
     case_context = "\n\n".join(case_results)
     
     # 3. Combine them cleanly with strict boundaries

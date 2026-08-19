@@ -24,7 +24,7 @@ def generate_legal_answer(query: str, context_chunks: list) -> str:
     """
     # 1. Combine all retrieved chunks into one big context block
     combined_context = "\n\n---\n\n".join(
-        [doc.page_content for doc in context_chunks]
+        [doc.page_content if hasattr(doc, 'page_content') else str(doc) for doc in context_chunks]
     )
 
     # 2. Build the strict grounding prompt

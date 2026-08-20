@@ -1,8 +1,9 @@
 import os
+import tiktoken
+import chromadb
+from chromadb.utils import embedding_functions
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
 def process_legal_document(pdf_path, case_id=None):
     print(f"Loading document: {pdf_path}...")
@@ -11,17 +12,31 @@ def process_legal_document(pdf_path, case_id=None):
     loader = PyPDFLoader(pdf_path)
     documents = loader.load()
     
-    # Task 2: Split the text (1000 size, 200 overlap)
+    # Task 2: Split using token-based counting & legal-aware separators
+    encoder = tiktoken.get_encoding("cl100k_base")
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
+        chunk_size=200,
+        chunk_overlap=40,
+        length_function=lambda text: len(encoder.encode(text)),
+        separators=[
+            "\nChapter ",        # Biggest legal boundary (group of sections)
+            "\nSection ",        # Main legal unit
+            "\nArticle ",        # Used in Constitution/international law
+            "\nSchedule ",       # Tables/appendices at the end
+            "\nOrder ", "\nRule ",  # Used in CrPC, CPC procedural law
+            "\nClause ",         # Sub-divisions within a section
+            "\nExplanation",     # IPC-style explanations after sections
+            "\nProviso",         # "Provided that..." exceptions
+            "\nIllustration",    # IPC-style examples
+            "\n\n",              # Paragraph break
+            "\n",                # Line break
+            ". ",                # Sentence boundary
+            " ",                 # Word boundary
+            ""                   # Character (last resort)
+        ]
     )
     chunks = text_splitter.split_documents(documents)
     print(f"Successfully split into {len(chunks)} chunks.")
-    
-    import chromadb
-    from chromadb.utils import embedding_functions
 
     # Task 3: Save to ChromaDB using native client
     print("Saving to ChromaDB using native client...")

@@ -108,3 +108,5 @@ class AIDraftGeneratorView(views.APIView):
                 {"error": f"LangGraph execution failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+

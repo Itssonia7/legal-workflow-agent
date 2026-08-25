@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LegalService } from '../../services/legal.service';
@@ -21,7 +21,7 @@ export class CaseDashboard implements OnInit {
   showClientForm = false;
   showCaseForm = false;
 
-  constructor(private legalService: LegalService) {}
+  constructor(private legalService: LegalService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -29,12 +29,12 @@ export class CaseDashboard implements OnInit {
 
   loadData(): void {
     this.legalService.getClients().subscribe({
-      next: (data) => this.clients = data,
+      next: (data) => { this.clients = data; this.cdr.detectChanges(); },
       error: (err) => console.error('Error fetching clients:', err)
     });
 
     this.legalService.getCases().subscribe({
-      next: (data) => this.cases = data,
+      next: (data) => { this.cases = data; this.cdr.detectChanges(); },
       error: (err) => console.error('Error fetching cases:', err)
     });
   }

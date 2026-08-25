@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LegalService } from '../../services/legal.service';
@@ -18,7 +18,7 @@ export class Calendar implements OnInit {
   newSchedule = { case_file: '', hearing_date: '', description: '', court_room: '' };
   showForm = false;
 
-  constructor(private legalService: LegalService) {}
+  constructor(private legalService: LegalService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -26,12 +26,12 @@ export class Calendar implements OnInit {
 
   loadData(): void {
     this.legalService.getCases().subscribe({
-      next: (data) => this.cases = data,
+      next: (data) => { this.cases = data; this.cdr.detectChanges(); },
       error: (err) => console.error('Error fetching cases:', err)
     });
 
     this.legalService.getSchedules().subscribe({
-      next: (data) => this.schedules = data,
+      next: (data) => { this.schedules = data; this.cdr.detectChanges(); },
       error: (err) => console.error('Error fetching schedules:', err)
     });
   }

@@ -9,7 +9,7 @@
         <p class="text-sm text-indigo-200">Local Multi-Agent RAG System</p>
       </div>
 
-      <form (submit)="handleAuth(); $event.preventDefault()" class="space-y-4">
+      <form (ngSubmit)="handleAuth()" class="space-y-4">
         <div class="space-y-1">
           <label class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Username</label>
           <input 

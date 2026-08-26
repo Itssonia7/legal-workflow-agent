@@ -5,7 +5,7 @@ from chromadb.utils import embedding_functions
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-def process_legal_document(pdf_path, case_id=None):
+def process_legal_document(pdf_path, case_id=None, doc_id=None):
     print(f"Loading document: {pdf_path}...")
     
     # Task 1: Load the PDF
@@ -46,11 +46,17 @@ def process_legal_document(pdf_path, case_id=None):
     client = chromadb.PersistentClient(path=DB_PATH)
     embedding_func = embedding_functions.DefaultEmbeddingFunction()
     
+    # Initialize collection with cosine space setting
     collection = client.get_or_create_collection(
         name="legal_knowledge_vault",
-        embedding_function=embedding_func
+        embedding_function=embedding_func,
+        metadata={"hnsw:space": "cosine"}
     )
     
+    # 1. Clean up existing chunks for this specific document ID (Idempotency check)
+    if doc_id:
+        collection.delete(where={"document_id": str(doc_id)})
+        
     # Prepare documents, metadatas, and ids
     texts = [chunk.page_content for chunk in chunks]
     
@@ -62,9 +68,15 @@ def process_legal_document(pdf_path, case_id=None):
         }
         if case_id:
             meta["case_id"] = str(case_id)
+        if doc_id:
+            meta["document_id"] = str(doc_id)
         metadatas.append(meta)
         
-    ids = [f"doc_{os.path.basename(pdf_path)}_{i}" for i in range(len(chunks))]
+    # Generate unique chunk IDs based on Document ID
+    if doc_id:
+        ids = [f"doc_chunk_{doc_id}_{i}" for i in range(len(chunks))]
+    else:
+        ids = [f"doc_{os.path.basename(pdf_path)}_{i}" for i in range(len(chunks))]
     
     # Add directly to native ChromaDB collection
     collection.add(

@@ -16,7 +16,8 @@ def search_legal_documents(query: str, source_type: str = None, case_id: str = N
     
     collection = client.get_or_create_collection(
         name="legal_knowledge_vault",
-        embedding_function=embedding_func
+        embedding_function=embedding_func,
+        metadata={"hnsw:space": "cosine"}
     )
     
     # 2. Build the search parameters

@@ -19,7 +19,8 @@ def seed_huggingface_statutes():
     
     collection = client.get_or_create_collection(
         name="legal_knowledge_vault",
-        embedding_function=embedding_func
+        embedding_function=embedding_func,
+        metadata={"hnsw:space": "cosine"}
     )
 
     documents = []

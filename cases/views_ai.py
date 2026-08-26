@@ -1,4 +1,5 @@
 import os
+import hashlib
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -31,24 +32,56 @@ class DocumentUploadAndIngestView(views.APIView):
 
         case_file = get_object_or_404(CaseFile, id=case_id, lawyer=request.user)
 
-        # Create LegalDocument record
-        doc = LegalDocument.objects.create(
-            case_file=case_file,
-            file=file_obj,
-            name=file_obj.name,
-            indexed=False
-        )
+        # 1. Compute SHA-256 hash of the uploaded file contents
+        sha256 = hashlib.sha256()
+        for chunk in file_obj.chunks():
+            sha256.update(chunk)
+        file_hash = sha256.hexdigest()
 
-        # Ingest file content into ChromaDB
+        # 2. Check if this file has already been uploaded for this specific case
+        same_case_duplicate = LegalDocument.objects.filter(
+            case_file=case_file,
+            content_hash=file_hash
+        ).first()
+
+        if same_case_duplicate:
+            return Response(
+                {"error": f"Document '{file_obj.name}' has already been uploaded for this case."},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        # 3. Check if file exists globally (uploaded by another case or lawyer)
+        global_duplicate = LegalDocument.objects.filter(content_hash=file_hash).first()
+
+        if global_duplicate:
+            # Create a database record referencing the existing file path
+            doc = LegalDocument.objects.create(
+                case_file=case_file,
+                file=global_duplicate.file,  # Points to the existing storage path
+                name=file_obj.name,
+                content_hash=file_hash,
+                indexed=False
+            )
+        else:
+            # Save the new file normally
+            doc = LegalDocument.objects.create(
+                case_file=case_file,
+                file=file_obj,
+                name=file_obj.name,
+                content_hash=file_hash,
+                indexed=False
+            )
+
+        # 4. Ingest file content into ChromaDB
         file_path = doc.file.path
         if os.path.exists(file_path):
             try:
                 print(f"[Backend] Triggering ChromaDB ingestion for: {file_path}")
-                process_legal_document(file_path, case_id)
+                process_legal_document(file_path, case_id, doc.id)
                 doc.indexed = True
                 doc.save()
             except Exception as e:
-                doc.delete()  # Clean up if ingestion fails
+                doc.delete()  # Clean up the DB record if ingestion fails
                 return Response(
                     {"error": f"Failed to ingest document: {str(e)}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR

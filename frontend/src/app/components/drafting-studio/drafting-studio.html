@@ -1,164 +1,398 @@
-<div class="space-y-6 max-w-5xl mx-auto">
-  <!-- Intro Banner -->
-  <div class="bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-2xl p-6 shadow-md space-y-2">
-    <h2 class="text-2xl font-bold">Local AI Legal Generation</h2>
-    <p class="text-sm text-indigo-200">
-      Select a case context and enter your legal drafting requirements. Our Multi-Agent system (Researcher, Drafter, and Critic) will retrieve matching case details and Indian statutory laws from ChromaDB to compile a verified draft.
-    </p>
+<div class="space-y-6 max-w-6xl mx-auto pb-16">
+  <!-- Executive Intro Banner -->
+  <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-sm space-y-2 border border-slate-800">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <div class="flex items-center gap-2.5 mb-1.5">
+          <span class="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-200 border border-slate-700 tracking-wider uppercase">
+            Legal Intelligence Studio
+          </span>
+          <span class="text-xs text-slate-400">Standard Archetypes & DOCX Engine</span>
+        </div>
+        <h2 class="text-2xl font-bold tracking-tight font-sans">Legal Document Drafting & Verification Studio</h2>
+        <p class="text-sm text-slate-300 max-w-3xl mt-1 leading-relaxed">
+          Draft authentic Indian court pleadings, demand notices, affidavits, and commercial agreements grounded strictly in case facts from ChromaDB with automated Critic verification.
+        </p>
+      </div>
+    </div>
   </div>
 
-  <!-- Input Panel -->
-  <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Case Selection Dropdown -->
+  <!-- Drafting Configuration Card -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <!-- Target Case Selection -->
       <div class="space-y-2">
-        <label class="text-sm font-bold text-gray-800">Target Case File Context</label>
+        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wider">1. Target Case File Context</label>
         <select 
           [(ngModel)]="selectedCaseId" 
-          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-800 focus:bg-white transition shadow-2xs font-medium text-slate-800">
           <option *ngFor="let c of cases" [value]="c.id">
-            {{ c.title }} (Client: {{ c.client_name || c.client }})
+            Case #{{ c.id }}: {{ c.title }} (Client: {{ c.client_name || c.client }})
           </option>
           <option *ngIf="cases.length === 0" [value]="null" disabled>
             No cases available. Please create a case first.
           </option>
         </select>
       </div>
+
+      <!-- Document Archetype Selector -->
+      <div class="space-y-2">
+        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wider">2. Document Standard Archetype</label>
+        <select 
+          [(ngModel)]="selectedDocType" 
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-800 focus:bg-white transition shadow-2xs font-medium text-slate-800">
+          <option *ngFor="let dt of docTypes" [value]="dt.id">
+            {{ dt.label }} — {{ dt.desc }}
+          </option>
+        </select>
+      </div>
     </div>
 
-    <!-- Prompt Area -->
+    <!-- Drafting Prompt -->
     <div class="space-y-2">
-      <label class="text-sm font-bold text-gray-800">Drafting Prompt</label>
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-semibold text-slate-700 uppercase tracking-wider">3. Drafting Instructions & Requirements</label>
+        <span class="text-xs text-slate-400">Specifies relief, relevant facts, and preferred legal sections</span>
+      </div>
       <textarea 
         [(ngModel)]="draftPrompt" 
         rows="3"
-        placeholder="e.g., Draft a 3-sentence bail application for a minor accused of theft under section 379 IPC. Highlight that this is their first offense..."
-        class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition"></textarea>
+        placeholder="e.g., Draft a regular bail application under Section 439 of BNSS for our client accused of theft under section 379 IPC. Emphasize that the client is a student with clean antecedents, investigation is complete, and no custodial interrogation is required..."
+        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-slate-800 focus:bg-white transition shadow-2xs leading-relaxed text-slate-900"></textarea>
     </div>
     
-    <button 
-      (click)="generateLegalDraft()"
-      [disabled]="drafting || !draftPrompt.trim() || !selectedCaseId"
-      class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white px-6 py-3.5 rounded-xl font-bold transition flex items-center justify-center gap-3">
-      <svg *ngIf="drafting" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      {{ drafting ? 'Executing Multi-Agent Loop...' : 'Generate Verified Draft' }}
-    </button>
+    <!-- Action Button -->
+    <div class="flex items-center justify-between flex-wrap gap-3 pt-2">
+      <div class="flex items-center gap-2 text-xs text-slate-500">
+        <span class="h-2 w-2 rounded-full bg-emerald-600"></span>
+        <span>Grounded strictly with ChromaDB RAG Vector Store</span>
+      </div>
+      <button 
+        (click)="generateLegalDraft()"
+        [disabled]="drafting || !draftPrompt.trim() || !selectedCaseId"
+        class="bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white px-7 py-3.5 rounded-xl font-semibold text-sm transition shadow-sm hover:shadow flex items-center justify-center gap-3">
+        <svg *ngIf="drafting" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        {{ drafting ? 'Synthesizing Legal Instrument...' : 'Generate Verified Draft' }}
+      </button>
+    </div>
   </div>
 
-  <!-- Drafting Progress Pipeline Animations -->
-  <div *ngIf="drafting" class="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm space-y-6 text-center">
-    <h3 class="font-bold text-gray-800">LangGraph Pipeline In Progress</h3>
+  <!-- Drafting Progress Pipeline Animation -->
+  <div *ngIf="drafting" class="bg-white border border-slate-200 rounded-2xl p-8 shadow-xs space-y-6 text-center">
+    <div class="flex items-center justify-center gap-2 text-slate-800 font-semibold text-xs tracking-wider uppercase">
+      <span class="h-2 w-2 rounded-full bg-slate-900 animate-pulse"></span>
+      <span>Autonomous Multi-Agent Legal Verification Pipeline Running</span>
+    </div>
     
-    <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 pt-4">
+    <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 pt-2">
       <!-- Researcher -->
       <div class="flex flex-col items-center space-y-2">
-        <div class="h-14 w-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center relative shadow-sm">
-          <span class="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-indigo-500 animate-ping"></span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="h-12 w-12 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl flex items-center justify-center relative shadow-2xs">
+          <span class="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-slate-900 animate-ping"></span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
-        <span class="text-xs font-bold text-gray-600">1. Researcher Agent</span>
-        <span class="text-[10px] text-gray-400">Extracting Terms & Searching ChromaDB</span>
+        <span class="text-xs font-semibold text-slate-800">1. Legal Research</span>
+        <span class="text-[11px] text-slate-500">Querying Statutes & Case Facts</span>
       </div>
 
-      <!-- Line 1 -->
-      <div class="hidden md:block h-0.5 w-12 bg-indigo-100 relative">
-        <span class="absolute h-2 w-2 rounded-full bg-indigo-500 top-[-3px] left-0 animate-[ping_1.5s_infinite]"></span>
+      <!-- Connector 1 -->
+      <div class="hidden md:block h-0.5 w-12 bg-slate-200 relative">
+        <span class="absolute h-1.5 w-1.5 rounded-full bg-slate-700 top-[-2px] left-0 animate-[ping_1.5s_infinite]"></span>
       </div>
 
       <!-- Drafter -->
       <div class="flex flex-col items-center space-y-2">
-        <div class="h-14 w-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="h-12 w-12 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl flex items-center justify-center shadow-2xs">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
         </div>
-        <span class="text-xs font-bold text-gray-600">2. Drafter Agent</span>
-        <span class="text-[10px] text-gray-400">Composing Document Draft via Llama 3</span>
+        <span class="text-xs font-semibold text-slate-800">2. Drafting Agent</span>
+        <span class="text-[11px] text-slate-500">Applying {{ getDocTypeBadge() }} Standard</span>
       </div>
 
-      <!-- Line 2 -->
-      <div class="hidden md:block h-0.5 w-12 bg-indigo-100"></div>
+      <!-- Connector 2 -->
+      <div class="hidden md:block h-0.5 w-12 bg-slate-200"></div>
 
       <!-- Critic -->
       <div class="flex flex-col items-center space-y-2">
-        <div class="h-14 w-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="h-12 w-12 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl flex items-center justify-center shadow-2xs">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
-        <span class="text-xs font-bold text-gray-600">3. Critic Agent</span>
-        <span class="text-[10px] text-gray-400">Verifying Citations & Fact Consistency</span>
+        <span class="text-xs font-semibold text-slate-800">3. Verification Critic</span>
+        <span class="text-[11px] text-slate-500">Cross-checking Facts & Citations</span>
       </div>
     </div>
-    <p class="text-xs text-amber-500 font-semibold animate-pulse pt-2">Note: Local generation may take up to 60-90 seconds to run verification iterations.</p>
+    <p class="text-xs text-slate-500 font-medium pt-2">Llama 3 verification loop operates in real-time across objective statutes and client evidence.</p>
   </div>
 
-  <!-- Output Panel -->
-  <div *ngIf="draftResult" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Draft (2/3 width) -->
-    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4 lg:col-span-2">
-      <div class="flex items-center justify-between">
-        <h3 class="font-bold text-gray-800">Final Legal Draft</h3>
-        <span [ngClass]="{'bg-emerald-50 text-emerald-600 border-emerald-100': draftResult.is_approved, 'bg-amber-50 text-amber-600 border-amber-100': !draftResult.is_approved}" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold border">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-          </svg>
-          {{ draftResult.is_approved ? 'Approved by Critic' : 'Revision Limit Reached' }}
+  <!-- Draft Output & Interactive Review Workspace -->
+  <div *ngIf="draftResult" class="space-y-4">
+    
+    <!-- Action Toolbar (Accept / Reject / DOCX / Print) -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between flex-wrap gap-3">
+      <!-- Left: Status Badges -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <span [ngClass]="{
+          'bg-emerald-50 text-emerald-800 border-emerald-300': draftStatus === 'accepted',
+          'bg-amber-50 text-amber-800 border-amber-300': draftStatus === 'review_pending',
+          'bg-slate-100 text-slate-800 border-slate-300': draftStatus === 'revising'
+        }" class="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-semibold border">
+          <span class="h-2 w-2 rounded-full" [ngClass]="{
+            'bg-emerald-600': draftStatus === 'accepted',
+            'bg-amber-600 animate-pulse': draftStatus === 'review_pending',
+            'bg-slate-800 animate-spin': draftStatus === 'revising'
+          }"></span>
+          {{ draftStatus === 'accepted' ? 'Accepted & Finalized' : (draftStatus === 'revising' ? 'Revising Draft...' : 'Draft v' + (draftResult.revision_count || 1) + ' (Pending Review)') }}
+        </span>
+
+        <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+          {{ getDocTypeBadge() }}
         </span>
       </div>
-      
-      <!-- Draft Body -->
-      <div class="bg-gray-50 border border-gray-100 rounded-xl p-5 font-mono text-sm leading-relaxed text-gray-700 whitespace-pre-wrap max-h-[500px] overflow-y-auto">
-        {{ draftResult.current_draft }}
+
+      <!-- Right: Action Buttons -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- 1. Accept Draft Button -->
+        <button 
+          *ngIf="draftStatus !== 'accepted'"
+          (click)="acceptDraft()"
+          class="flex items-center gap-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl transition shadow-2xs">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+          Accept Draft
+        </button>
+
+        <!-- 2. Reject / Request Changes Button -->
+        <button 
+          (click)="openRevisionModal()"
+          class="flex items-center gap-1.5 text-xs font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 px-4 py-2 rounded-xl transition shadow-2xs">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Reject / Request Changes
+        </button>
+
+        <div class="h-5 w-px bg-slate-200 hidden sm:block"></div>
+
+        <!-- 3. Download DOCX Button -->
+        <button 
+          (click)="downloadDocx()"
+          [disabled]="isExportingDocx"
+          class="flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl transition shadow-2xs disabled:opacity-50">
+          <svg *ngIf="!isExportingDocx" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <svg *ngIf="isExportingDocx" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ isExportingDocx ? 'Exporting...' : 'Download .docx' }}
+        </button>
+
+        <!-- 4. Print / PDF Button -->
+        <button 
+          (click)="printDocument()"
+          title="Print or Save as PDF"
+          class="flex items-center gap-1.5 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          PDF / Print
+        </button>
+
+        <!-- 5. Copy Text Button -->
+        <button 
+          (click)="copyToClipboard()"
+          title="Copy draft text"
+          class="flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-2 rounded-xl transition">
+          <svg *ngIf="!copySuccess" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+          </svg>
+          <span>{{ copySuccess ? 'Copied' : 'Copy' }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Agent Metadata & References (1/3 width) -->
-    <div class="space-y-6">
-      <!-- Verification Statistics Card -->
-      <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-        <h4 class="font-bold text-gray-800 text-sm">Agent Execution Summary</h4>
-        <div class="divide-y divide-gray-100 text-xs">
-          <div class="py-2.5 flex items-center justify-between">
-            <span class="text-gray-500 font-semibold">Iteration Loops</span>
-            <span class="font-bold text-gray-800">{{ draftResult.revision_count }}</span>
-          </div>
-          <div class="py-2.5 flex items-center justify-between">
-            <span class="text-gray-500 font-semibold">Status</span>
-            <span [ngClass]="{'text-emerald-600': draftResult.is_approved, 'text-amber-500': !draftResult.is_approved}" class="font-bold uppercase">
-              {{ draftResult.is_approved ? 'Verified' : 'Incomplete' }}
-            </span>
-          </div>
-          <div class="py-2.5 flex flex-col gap-1">
-            <span class="text-gray-500 font-semibold">Last Critic Remarks</span>
-            <span class="text-gray-400 italic">{{ draftResult.critic_feedback || 'No complaints - perfect structure.' }}</span>
+    <!-- Main Workspace: A4 Document Canvas (Left) + Side Inspector (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      
+      <!-- A4 PDF/DOC PREVIEW CANVAS (Col span 2) -->
+      <div class="lg:col-span-2">
+        <div class="bg-slate-200/80 p-4 md:p-8 rounded-2xl border border-slate-300 flex justify-center">
+          
+          <!-- Simulated A4 Paper Sheet -->
+          <div class="legal-page-canvas max-w-[780px] w-full bg-white rounded-xs p-10 md:p-14 border border-slate-300 relative shadow-xl">
+            
+            <!-- Watermark Stamp -->
+            <div *ngIf="draftStatus !== 'accepted'" class="watermark-pending">
+              DRAFT • FOR REVIEW ONLY
+            </div>
+            <div *ngIf="draftStatus === 'accepted'" class="watermark-accepted">
+              OFFICIAL LEGAL INSTRUMENT
+            </div>
+
+            <!-- Header of Legal Document -->
+            <div class="border-b border-slate-200 pb-3 mb-6 flex items-center justify-between text-[11px] text-slate-400 font-sans">
+              <span class="tracking-widest uppercase font-semibold">Chambers of Advocate • Verified Draft</span>
+              <span>Case Ref #{{ selectedCaseId }}</span>
+            </div>
+
+            <!-- Legal Document Formatted Body -->
+            <div 
+              [innerHTML]="getFormattedDraftHtml()"
+              class="relative z-10 font-serif text-slate-900 text-justify select-text">
+            </div>
+
+            <!-- Footer of Legal Document -->
+            <div class="border-t border-slate-200 pt-4 mt-12 flex items-center justify-between text-[10px] text-slate-400 font-sans">
+              <span>Prepared via Antigravity Legal Intelligence</span>
+              <span>Strictly Privileged & Confidential • Page 1 of 1</span>
+            </div>
+
           </div>
         </div>
       </div>
 
-      <!-- Agent Steps Logs -->
-      <div *ngIf="draftResult.step_logs && draftResult.step_logs.length > 0" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-3">
-        <h4 class="font-bold text-gray-800 text-sm">Agent Activity Log</h4>
-        <ul class="space-y-2 text-xs text-gray-600 max-h-[200px] overflow-y-auto">
-          <li *ngFor="let log of draftResult.step_logs" class="flex items-start gap-2">
-            <span class="text-indigo-500 mt-0.5">•</span>
-            <span>{{ log }}</span>
-          </li>
-        </ul>
+      <!-- SIDE INSPECTOR PANEL (Col span 1) -->
+      <div class="space-y-5">
+        
+        <!-- Verification Summary Card -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3.5">
+          <h4 class="font-semibold text-slate-800 text-xs uppercase tracking-wider">Multi-Agent Verification</h4>
+          
+          <div class="divide-y divide-slate-100 text-xs">
+            <div class="py-2 flex items-center justify-between">
+              <span class="text-slate-500 font-medium">Critic Verification</span>
+              <span [ngClass]="{'text-emerald-700': draftResult.is_approved, 'text-amber-700': !draftResult.is_approved}" class="font-semibold flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full" [ngClass]="{'bg-emerald-600': draftResult.is_approved, 'bg-amber-600': !draftResult.is_approved}"></span>
+                {{ draftResult.is_approved ? 'Verified Approved' : 'Review Required' }}
+              </span>
+            </div>
+            <div class="py-2 flex items-center justify-between">
+              <span class="text-slate-500 font-medium">Draft Version</span>
+              <span class="font-semibold text-slate-800">v{{ draftResult.revision_count || 1 }}</span>
+            </div>
+            <div class="py-2 flex items-center justify-between">
+              <span class="text-slate-500 font-medium">Standard Type</span>
+              <span class="font-semibold text-slate-800">{{ getDocTypeBadge(draftResult.doc_type) }}</span>
+            </div>
+            <div class="py-2.5 flex flex-col gap-1">
+              <span class="text-slate-500 font-medium">Critic Verification Remarks</span>
+              <span class="text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
+                {{ draftResult.critic_feedback || 'Document structure and facts conform to legal archetype standards.' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revision History Card (Human-in-the-Loop) -->
+        <div *ngIf="revisionHistory.length > 1" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
+          <h4 class="font-semibold text-slate-800 text-xs uppercase tracking-wider">Revision History</h4>
+          <div class="space-y-2.5 text-xs max-h-[180px] overflow-y-auto">
+            <div *ngFor="let rev of revisionHistory" class="p-2.5 rounded-xl border border-slate-100 bg-slate-50 space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-900">Version {{ rev.version }}</span>
+                <span class="text-[10px] text-slate-400">{{ rev.timestamp | date:'shortTime' }}</span>
+              </div>
+              <p *ngIf="rev.feedback" class="text-slate-600 text-[11px] italic">
+                Feedback: "{{ rev.feedback }}"
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Steps Log -->
+        <div *ngIf="draftResult.step_logs && draftResult.step_logs.length > 0" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
+          <h4 class="font-semibold text-slate-800 text-xs uppercase tracking-wider">Execution Pipeline Steps</h4>
+          <ul class="space-y-1.5 text-xs text-slate-600 max-h-[160px] overflow-y-auto">
+            <li *ngFor="let log of draftResult.step_logs" class="flex items-start gap-2">
+              <span class="text-slate-400 mt-0.5">•</span>
+              <span class="leading-tight">{{ log }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Retrieved Grounding Precedents -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
+          <h4 class="font-semibold text-slate-800 text-xs uppercase tracking-wider">Retrieved Facts & Precedents</h4>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] font-mono text-slate-600 leading-normal max-h-[180px] overflow-y-auto">
+            {{ draftResult.context_documents || 'No explicit context retrieved.' }}
+          </div>
+        </div>
+
       </div>
 
-      <!-- Retrieved Precedents Card -->
-      <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-        <h4 class="font-bold text-gray-800 text-sm">Retrieved Context Docs</h4>
-        <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[11px] font-mono text-gray-500 leading-normal max-h-[250px] overflow-y-auto">
-          {{ draftResult.context_documents }}
+    </div>
+
+  </div>
+
+  <!-- Human-in-the-Loop Revision Modal -->
+  <div *ngIf="showRevisionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          <h3 class="font-bold text-slate-900 text-base">Request Revisions from AI Drafter</h3>
         </div>
+        <button (click)="closeRevisionModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          ✕
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        Specify what you want changed. The Drafter and Critic agents will re-synthesize a revised draft adhering to your instructions.
+      </p>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="space-y-1.5">
+        <span class="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Quick Suggestions:</span>
+        <div class="flex flex-wrap gap-1.5">
+          <button 
+            *ngFor="let s of quickSuggestions"
+            (click)="addSuggestion(s)"
+            type="button"
+            class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium border border-slate-200 transition">
+            + {{ s }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Feedback Input -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-semibold text-slate-700">Detailed Modification Notes:</label>
+        <textarea 
+          [(ngModel)]="userFeedback"
+          rows="4"
+          placeholder="e.g., Please ensure that all facts regarding the transfer to third parties are completely narrated, specify the 15-day cure period, and demand compensation under Section 43A of the IT Act..."
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm focus:outline-none focus:border-slate-800 focus:bg-white transition shadow-2xs text-slate-900"></textarea>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button 
+          (click)="closeRevisionModal()"
+          class="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+          Cancel
+        </button>
+        <button 
+          (click)="submitRevision()"
+          [disabled]="!userFeedback.trim()"
+          class="bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white px-5 py-2.5 text-xs font-semibold rounded-xl transition shadow-2xs flex items-center gap-2">
+          <span>Submit Changes & Re-draft (v{{ (draftResult?.revision_count || 1) + 1 }})</span>
+        </button>
       </div>
     </div>
   </div>
+
 </div>

@@ -67,11 +67,42 @@ export class LegalService {
   }
 
   // AI Multi-Agent RAG Drafting
-  generateDraft(prompt: string, caseFileId: number): Observable<any> {
-    return this.http.post<any>(
-      `${this.apiUrl}/draft/`, 
-      { user_prompt: prompt, case_file: caseFileId }, 
-      this.getHeaders()
+  generateDraft(
+    prompt: string, 
+    caseFileId: number, 
+    docType: string = 'auto', 
+    userFeedback: string = '', 
+    previousDraft: string = '',
+    revisionCount: number = 0
+  ): Observable<any> {
+    const payload: any = {
+      user_prompt: prompt,
+      case_file: caseFileId,
+      doc_type: docType,
+      user_feedback: userFeedback,
+      previous_draft: previousDraft,
+      revision_count: revisionCount
+    };
+    return this.http.post<any>(`${this.apiUrl}/draft/`, payload, this.getHeaders());
+  }
+
+  // Export Legal Draft as DOCX
+  exportDraftDocx(
+    draftText: string, 
+    title: string = 'Legal_Draft', 
+    docType: string = 'bail', 
+    caseId?: number | null
+  ): Observable<Blob> {
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({
+      'Authorization': token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json'
+    });
+    return this.http.post(
+      `${this.apiUrl}/draft/export-docx/`,
+      { draft_text: draftText, title, doc_type: docType, case_id: caseId },
+      { headers, responseType: 'blob' }
     );
   }
 }
+

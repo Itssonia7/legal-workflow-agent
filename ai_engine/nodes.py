@@ -53,9 +53,9 @@ DOC_TYPE_SPECS = {
             "2. **MODE OF TRANSMISSION & NOTICEE PARTICULARS**:\nREGISTERED A.D. / SPEED POST\nNoticee: [Noticee Name]\nAddress: [Complete Postal Address with Pin Code]",
             "3. **SUBJECT LINE**:\nLEGAL NOTICE FOR [CLEAR REASON/GRIEVANCE] UNDER [STATUTORY PROVISIONS IDENTIFIED IN LEGAL FACTS]",
             "4. **AUTHORIZATION STATEMENT**:\nUNDER INSTRUCTIONS FROM AND ON BEHALF OF MY CLIENT, [Client Full Name], residing at [Client Address], I hereby serve upon you this Legal Notice:",
-            "5. **STATEMENT OF FACTS & CAUSE OF ACTION**:\nDetailed chronological narration reflecting ALL relevant events, dates, transactions, and breaches directly from the provided Client Case Facts. Numbered 1, 2, 3, 4... without summarizing or omitting any factual detail. Always mask Aadhaar numbers as XXXX-XXXX-XXXX.",
-            "6. **LEGAL GROUNDS & STATUTORY CITATIONS**:\nA. Statutory violations under Section 29(1), 30, 42, and 43 of the Aadhaar Act, 2016 prohibiting sharing core biometrics with third parties and establishing criminal liability;\nB. Civil liability and damages under Section 43A of the Information Technology Act, 2000 for failure to protect sensitive biometric data.",
-            "7. **DEMANDS, STATUTORY REMEDIES & NOTICE PERIOD**:\nNOW THEREFORE TAKE NOTICE THAT I HEREBY CALL UPON YOU TO:\n1. Forthwith permanently delete, destroy, purge, and cease and desist from sharing or transferring my client's biometric information from your servers and those of Apex Data Systems;\n2. Furnish written and certified confirmation of compliance along with a forensic audit report within 15 (fifteen) days from receipt of this notice;\n3. Pay a sum of ₹25,00,000/- (Rupees Twenty-Five Lakhs Only) as liquidated damages and compensation for gross negligence, breach of confidentiality, and mental agony.\n\nPlease take notice that in the event of failure to strictly comply within 15 days from receipt of this notice, my client shall initiate appropriate civil suits and criminal proceedings, entirely at your risk, cost, and consequences.",
+            "5. **STATEMENT OF FACTS & CAUSE OF ACTION**:\nDetailed chronological narration reflecting ALL relevant events, dates, transactions, and breaches directly from the provided Client Case Facts. Numbered 1, 2, 3, 4... without summarizing or omitting any factual detail.",
+            "6. **LEGAL GROUNDS & STATUTORY CITATIONS**:\nDetailed statutory violations and legal grounds based strictly on the laws identified in the provided Legal Statutes.",
+            "7. **DEMANDS, STATUTORY REMEDIES & NOTICE PERIOD**:\nClear articulation of the client's demands, required actions, and timeline for compliance based on the lawyer's instructions and facts. Explicitly mention consequences of non-compliance (civil/criminal proceedings).",
             "8. **ADVOCATE SIGNATURE & NOTICEE COPY**:\nYours faithfully,\n\n______________________\nAdv. ____________________ [Advocate Name]\nAdvocate for the Client\nEnrolment No.: [Bar Council Enrolment No. ________________]\n\nCOPY RETAINED FOR RECORD"
         ],
         "keywords": ["notice", "demand", "138", "cheque", "evict", "rent", "defamation", "cease and desist"]
@@ -88,7 +88,22 @@ DOC_TYPE_SPECS = {
             "7. **PRAYER**:\nWHEREFORE, it is most respectfully prayed that this Hon'ble Court may be pleased to grant regular bail to the applicant.",
             "8. **VERIFICATION & COUNSEL SIGNATURE**:\nVerification statement of truth under oath, Date, Place, and 'COUNSEL FOR APPLICANT: Adv. ____________________ [Advocate Name]'"
         ],
-        "keywords": ["bail", "pleading", "petition", "writ", "plaint", "quash", "appeal", "fir", "custody", "arrest"]
+        "keywords": ["bail", "fir", "arrest", "custody", "anticipatory", "sessions"]
+    },
+    "petition": {
+        "name": "Civil / Writ / General Petition",
+        "register": "Formal Court Petition register ('MOST RESPECTFULLY SHOWETH', 'PRAYER')",
+        "sections": [
+            "1. **COURT JURISDICTION**:\nIN THE HON'BLE COURT OF [Jurisdiction/Court Name]",
+            "2. **CAUSE TITLE**:\n[PETITION/SUIT/COMPLAINT TYPE] NO. _____ OF 202___",
+            "3. **MEMO OF PARTIES**:\n[Petitioner Name] ... PETITIONER / PLAINTIFF\nVERSUS\n[Respondent Name] ... RESPONDENT / DEFENDANT",
+            "4. **DOCUMENT TITLE & STATUTORY INVOCATION**:\n[Document Title e.g., PETITION UNDER SECTION...]",
+            "5. **STATEMENT OF FACTS**:\nNumbered paragraphs detailing the chronological facts and cause of action.",
+            "6. **LEGAL GROUNDS & STATUTORY CITATIONS**:\nDetailed statutory violations and legal grounds based strictly on the laws identified in the provided Legal Statutes.",
+            "7. **PRAYER**:\nWHEREFORE, it is most respectfully prayed that this Hon'ble Court may be pleased to grant the requested relief.",
+            "8. **VERIFICATION & COUNSEL SIGNATURE**:\nVerification statement of truth under oath, Date, Place, and 'COUNSEL FOR PETITIONER: Adv. ____________________ [Advocate Name]'"
+        ],
+        "keywords": ["petition", "writ", "plaint", "suit", "pleading", "complaint petition", "quash"]
     },
     "consumer": {
         "name": "Consumer Complaint / Statutory Grievance",
@@ -144,8 +159,10 @@ def resolve_doc_type(doc_type: str, user_prompt: str) -> str:
         return "consumer"
     if any(kw in lower_prompt for kw in ["notice", "demand", "138", "cheque bounce", "cease and desist", "call upon"]):
         return "notice"
-    if any(kw in lower_prompt for kw in ["bail", "fir", "arrest", "custody", "anticipatory", "quash", "pleading", "petition", "writ", "plaint", "sessions"]):
+    if any(kw in lower_prompt for kw in ["bail", "fir", "arrest", "custody", "anticipatory", "sessions"]):
         return "bail"
+    if any(kw in lower_prompt for kw in ["petition", "writ", "plaint", "suit", "pleading", "complaint petition", "quash"]):
+        return "petition"
     if any(kw in lower_prompt for kw in ["affidavit", "sworn", "undertaking", "oath", "declaration", "deponent"]):
         return "affidavit"
     if any(kw in lower_prompt for kw in ["agreement", "contract", "nda", "lease", "mou", "service agreement"]):
@@ -216,13 +233,13 @@ def drafter_agent(state: AgentState):
        - ONLY IF NO advocate name is provided by the lawyer, you MUST strictly use fillable blanks: 'Chambers of Adv. ____________________ [Advocate Name]' in the letterhead, and 'Adv. ____________________ [Advocate Name]' in the signature.
        - NEVER invent or assume an advocate name, and NEVER name the Advocate after the Client.
     4. UNIVERSAL FACTUAL COMPLETENESS:
-       - Under STATEMENT OF FACTS & CAUSE OF ACTION, narrate all chronological facts, dates, entities, and incidents directly from the Client Case Facts. In paragraph 1, identify the client, residence, and masked Aadhaar number (e.g. 'XXXX-XXXX-9012').
+       - Under STATEMENT OF FACTS & CAUSE OF ACTION, narrate all chronological facts, dates, entities, and incidents directly from the Client Case Facts. In paragraph 1, identify the client and residence.
     5. STATUTORY INTEGRITY & REMEDIES:
-       - Cite exact statutory provisions (Section 29(1), 30, 42, 43 of Aadhaar Act, 2016 and Section 43A of IT Act, 2000).
-       - In demands, explicitly demand permanent deletion and purging of records within 15 days, certified audit confirmation, and ₹25,00,000/- liquidated damages and compensation.
+       - Cite exact statutory provisions provided in the Legal Statutes.
+       - Extract exact damage amounts, specific actions (e.g., cease and desist), and deadlines directly from the Client Case Facts or Lawyer's Feedback. If no specific monetary amount is provided, demand compliance without inventing financial figures.
        - NEVER use placeholder phrases like 'as quantified in the case facts'.
     6. PRIVACY PROTECTION:
-       - Always mask Aadhaar and sensitive identification numbers (e.g. 'XXXX-XXXX-9012').
+       - Use context to mask sensitive personal identifiers (like Aadhaar or PAN) with 'XXXX', but do NOT mask general reference numbers, bank accounts, or dates.
     """
 
     response = llm.invoke([HumanMessage(content=prompt_text)])
@@ -292,27 +309,6 @@ def drafter_agent(state: AgentState):
             'Phone: [Contact No.]',
             final_draft
         )
-
-    # Deterministic Privacy Redaction: Mask any 12-digit Aadhaar number
-    final_draft = re.sub(
-        r'\b\d{4}[-\s]?\d{4}[-\s]?(\d{4})\b',
-        r'XXXX-XXXX-\1',
-        final_draft
-    )
-    
-    # Deterministic Remedy Cleanup: Purge any template placeholder sentences
-    final_draft = re.sub(
-        r'Pay damages,\s*compensation,\s*or outstanding sums as quantified in the case facts and lawyer\'s instructions for loss,\s*injury,\s*or breach\.?',
-        'Pay a sum of ₹25,00,000/- (Rupees Twenty-Five Lakhs Only) as liquidated damages and compensation for gross negligence, breach of confidentiality, and mental agony.',
-        final_draft,
-        flags=re.IGNORECASE
-    )
-    final_draft = re.sub(
-        r'as quantified in the case facts and lawyer\'s instructions',
-        'of ₹25,00,000/- (Rupees Twenty-Five Lakhs Only)',
-        final_draft,
-        flags=re.IGNORECASE
-    )
 
     # Clean advocate signature formatting
     if has_custom_advocate:

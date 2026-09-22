@@ -1,5 +1,6 @@
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
+from datetime import datetime
 try:
     from state import AgentState
     from retrieve import search_legal_documents
@@ -144,6 +145,17 @@ DOC_TYPE_SPECS = {
             "5. **EXECUTION & WITNESS SIGNATURES**:\nIN WITNESS WHEREOF the Parties have executed this Agreement on the day and year first above written.\nFOR FIRST PARTY: ___________________________\nFOR SECOND PARTY: ___________________________\nWITNESSES: 1. ___________________________ 2. ___________________________"
         ],
         "keywords": ["agreement", "contract", "nda", "lease", "mou", "service agreement"]
+    },
+    "custom": {
+        "name": "Custom Legal Document / Hybrid",
+        "register": "Formal legal drafting register appropriate to the specific request.",
+        "sections": [
+            "1. **DOCUMENT TITLE**:\n[Appropriate Title based on user request]",
+            "2. **STATEMENT OF FACTS & CAUSE OF ACTION**:\nDetailed chronological narration reflecting ALL relevant events directly from the provided Client Case Facts. Numbered 1, 2, 3...",
+            "3. **LEGAL GROUNDS & RELIEF SOUGHT**:\nLegal arguments and specific relief/prayer requested.",
+            "4. **ADVOCATE SIGNATURE**:\nYours faithfully,\n\n______________________\nAdv. ____________________ [Advocate Name]\nAdvocate for the Client\nEnrolment No.: [Bar Council Enrolment No. ________________]"
+        ],
+        "keywords": ["hybrid", "custom", "other"]
     }
 }
 
@@ -171,7 +183,7 @@ def resolve_doc_type(doc_type: str, user_prompt: str) -> str:
     if any(term in lower_prompt for term in ["to ", "against ", "send ", "serve ", "issue ", "draft a letter", "unauthorized"]):
         return "notice"
 
-    return "notice"
+    return "custom"
 
 
 def drafter_agent(state: AgentState):
@@ -214,6 +226,7 @@ def drafter_agent(state: AgentState):
 
     Target Document Standard: {spec['name']}
     Legal Register: {spec['register']}
+    Current Date: {datetime.now().strftime('%B %d, %Y')}
     User Request: {user_prompt}
     Legal Facts & Precedents: {context_documents}
     {revision_context}
@@ -240,6 +253,8 @@ def drafter_agent(state: AgentState):
        - NEVER use placeholder phrases like 'as quantified in the case facts'.
     6. PRIVACY PROTECTION:
        - Use context to mask sensitive personal identifiers (like Aadhaar or PAN) with 'XXXX', but do NOT mask general reference numbers, bank accounts, or dates.
+    7. DOCUMENT DATE:
+       - You MUST use the Current Date provided above ({datetime.now().strftime('%B %d, %Y')}) for the document's letterhead date, unless the lawyer explicitly requests a different past/future date. Do NOT guess a random date based on case facts.
     """
 
     response = llm.invoke([HumanMessage(content=prompt_text)])
@@ -252,76 +267,11 @@ def drafter_agent(state: AgentState):
         cleaned_lines.pop(0)
     final_draft = '\n'.join(cleaned_lines).strip()
 
-    # Deterministic safety post-processor:
-    # Check if a custom advocate was explicitly requested by the lawyer
-    has_custom_advocate = False
-    for text_source in [user_feedback, user_prompt]:
-        if not text_source:
-            continue
-        m = re.search(r'\b(?:advocate|adv|counsel)\b(?:\s+name)?(?:\s*(?:is|as|[:=]))?\s*([A-Za-z\.\s]{2,35}?)(?=[,\n;]|$|\bdate\b|\bphone\b|\bemail\b|\baddress\b|\bon behalf\b)', text_source, re.IGNORECASE)
-        if m:
-            candidate = m.group(1).strip().lower()
-            if candidate and "client" not in candidate and "rajesh" not in candidate and len(candidate) > 2:
-                has_custom_advocate = True
-                break
-
-    # Check if custom contact info was provided
-    combined_instructions = f"{user_prompt or ''} {user_feedback or ''}".lower()
-    has_custom_email = '@' in (user_feedback or '') or '@' in (user_prompt or '')
-    has_custom_phone = any(p in combined_instructions for p in ['phone', 'mobile', 'contact', '+91', 'tel'])
-    
-    if not has_custom_advocate:
-        # 1. Letterhead advocate name replacement
-        final_draft = re.sub(
-            r'Chambers of (?:Adv\.|Advocate)\s+[A-Za-z\s\.\_\[\]]+?(?=,|\n)',
-            'Chambers of Adv. ____________________ [Advocate Name]',
-            final_draft
-        )
-        # 2. Signature advocate name replacement
-        final_draft = re.sub(
-            r'\bAdv\.\s+(?:Rakesh Kumar|Rajesh Kumar|Shruti Patil|Rohan Jain|Rohan Kumar|\[Full Name\]|[A-Z][a-z]+\s+[A-Z][a-z]+)',
-            'Adv. ____________________ [Advocate Name]',
-            final_draft
-        )
-    else:
-        # If custom advocate was requested, only sanitize if client name was mistakenly used
-        final_draft = re.sub(
-            r'\bAdv\.\s+Rajesh Kumar\b',
-            'Adv. ____________________ [Advocate Name]',
-            final_draft
-        )
-        final_draft = re.sub(
-            r'Chambers of (?:Adv\.|Advocate)\s+Rajesh Kumar(?=,|\n)',
-            'Chambers of Adv. ____________________ [Advocate Name]',
-            final_draft
-        )
-
-    # Sanitize Contact Info: only placeholderize if NO contact info was provided by user
-    if not has_custom_email:
-        final_draft = re.sub(
-            r'Email:\s*\[?[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\]?(?:\(mailto:[^\)]+\))?',
-            'Email: [Advocate Email]',
-            final_draft
-        )
-    if not has_custom_phone:
-        final_draft = re.sub(
-            r'Phone:\s*\+?[0-9\-\s]{7,15}',
-            'Phone: [Contact No.]',
-            final_draft
-        )
-
-    # Clean advocate signature formatting
-    if has_custom_advocate:
-        final_draft = re.sub(
-            r'Yours faithfully,\s*\n+(?:Adv\.\s*)?Shruti Patil',
-            'Yours faithfully,\n\n______________________\nAdv. Shruti Patil',
-            final_draft
-        )
-        final_draft = re.sub(
-            r'(\bAdv\.\s+[A-Za-z\s]+?)\n+\1',
-            r'\1',
-            final_draft
-        )
+    # Deterministic PII Redaction
+    # Redact Aadhaar (12 digits, optional spaces)
+    final_draft = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b', 'XXXX XXXX XXXX', final_draft)
+    # Redact PAN (5 letters, 4 digits, 1 letter)
+    final_draft = re.sub(r'\b[A-Z]{5}\d{4}[A-Z]\b', 'XXXXX0000X', final_draft)
 
     print("[Drafter] Draft generated successfully.")
     

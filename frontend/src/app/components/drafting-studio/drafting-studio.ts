@@ -2,6 +2,7 @@ import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LegalService } from '../../services/legal.service';
+import * as Diff from 'diff';
 
 interface RevisionRecord {
   version: number;
@@ -42,6 +43,7 @@ export class DraftingStudio implements OnInit {
   // Human-in-the-Loop Revision states
   userFeedback = '';
   showRevisionModal = false;
+  showDiff = true;
   revisionHistory: RevisionRecord[] = [];
   isExportingDocx = false;
   copySuccess = false;
@@ -139,11 +141,19 @@ export class DraftingStudio implements OnInit {
     const previousDraft = this.draftResult.current_draft;
     const currentCount = this.draftResult.revision_count || 1;
 
+    let accumulatedFeedback = 'Ensure you follow ALL of these instructions. Do not undo previous instructions to apply new ones:\n';
+    for (let i = this.revisionHistory.length - 1; i >= 0; i--) {
+      if (this.revisionHistory[i].feedback) {
+        accumulatedFeedback += `- PAST INSTRUCTION: ${this.revisionHistory[i].feedback}\n`;
+      }
+    }
+    accumulatedFeedback += `- NEW INSTRUCTION: ${this.userFeedback}\n`;
+
     this.legalService.generateDraft(
       this.draftPrompt,
       this.selectedCaseId,
       this.selectedDocType,
-      this.userFeedback,
+      accumulatedFeedback,
       previousDraft,
       currentCount
     ).subscribe({
@@ -238,7 +248,27 @@ export class DraftingStudio implements OnInit {
   getFormattedDraftHtml(): string {
     if (!this.draftResult || !this.draftResult.current_draft) return '';
     
-    const rawLines = this.draftResult.current_draft.split('\n');
+    let textToFormat = this.draftResult.current_draft;
+    const isRevision = this.revisionHistory.length > 1;
+
+    if (this.showDiff && isRevision) {
+      const oldDraft = this.revisionHistory[1].draft;
+      const diffParts = Diff.diffWords(oldDraft, textToFormat);
+      
+      let highlightedText = '';
+      for (const part of diffParts) {
+        if (part.added) {
+          highlightedText += `<span class="bg-green-100 text-green-900 px-0.5 rounded">${part.value}</span>`;
+        } else if (part.removed) {
+          highlightedText += `<span class="bg-red-100 text-red-900 line-through px-0.5 rounded">${part.value}</span>`;
+        } else {
+          highlightedText += part.value;
+        }
+      }
+      textToFormat = highlightedText;
+    }
+
+    const rawLines = textToFormat.split('\n');
     const formattedLines: string[] = [];
 
     for (let rawLine of rawLines) {
@@ -249,7 +279,7 @@ export class DraftingStudio implements OnInit {
       }
 
       // 1. Strip conversational opening preambles
-      if (/^(here is|here's|below is|certainly|sure|please find|as requested|i will draft|i will generate|i shall draft|i have drafted)/i.test(line)) {
+      if (/^(here is|here's|below is|certainly|sure|please find|as requested|i will draft|i will generate|i shall draft|i have drafted)/i.test(line.replace(/<[^>]*>/g, '').trim())) {
         continue;
       }
 
@@ -257,8 +287,9 @@ export class DraftingStudio implements OnInit {
       line = line.replace(/^\s*\(+['"]?/, '').replace(/['"]?\)+\s*$/, '').trim();
       line = line.replace(/^['"]/, '').replace(/['"]$/, '').trim();
 
-      // Clean line without markdown stars for classifier checks
-      let cleanLine = line
+      // Clean line without markdown stars for classifier checks, and strip HTML tags (like our diff spans) for testing!
+      const rawTextForTests = line.replace(/<[^>]*>/g, '');
+      let cleanLine = rawTextForTests
         .replace(/^(\d+\.\s*)?\*{0,2}(COURT JURISDICTION|DOCUMENT TITLE|CAUSE TITLE|MEMO OF PARTIES)\*{0,2}\s*[:\-]\s*/i, '')
         .replace(/\*\*:/g, ':')
         .replace(/:\*\*/g, ':')
@@ -266,14 +297,14 @@ export class DraftingStudio implements OnInit {
         .replace(/[*#]+$/, '');
 
       // Apply bold formatting inside line for remaining markdown
-      let htmlLine = cleanLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>');
+      let htmlLine = line.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>');
 
       // Check section headers (which get the clean uppercase divider styling)
-      const isLetterheadHeader = /^(\d+\.\s*)?\*{0,2}ADVOCATE('?S)?\s+LETTERHEAD/i.test(line);
-      const isSectionHeader = /^(\d+\.\s*)?\*{0,2}(ADVOCATE LETTERHEAD|MODE OF TRANSMISSION|NOTICEE PARTICULARS|SUBJECT LINE|AUTHORIZATION STATEMENT|STATEMENT OF FACTS|FACTS OF THE CASE|FACTS|LEGAL GROUNDS|STATUTORY CITATIONS|LEGAL BASIS|DEMAND|DEMANDS|CONSEQUENCE|CONSEQUENCES|GROUNDS|PRAYER|VERIFICATION|RECITALS|OPERATIVE|DEPONENT|SCHEDULE|ANNEXURE|PRELIMINARY OBJECTIONS|PARA-WISE REPLY|ADVOCATE SIGNATURE|NOTICEE COPY|RECORD COPY|COMMISSION JURISDICTION|COMPLAINT NO|DEFICIENCY OF SERVICE|UNFAIR TRADE PRACTICE|ATTESTATION BLOCK|DATE AND PARTIES|EXECUTION & WITNESS)\*{0,2}[:\-]?/i.test(line) ||
-        (/^(\*\*.*?\*\*)$/.test(line) && line.length < 90 && !/^(Sub|Subject)/i.test(cleanLine));
+      const isLetterheadHeader = /^(\d+\.\s*)?\*{0,2}ADVOCATE('?S)?\s+LETTERHEAD/i.test(rawTextForTests);
+      const isSectionHeader = /^(\d+\.\s*)?\*{0,2}(ADVOCATE LETTERHEAD|MODE OF TRANSMISSION|NOTICEE PARTICULARS|SUBJECT LINE|AUTHORIZATION STATEMENT|STATEMENT OF FACTS|FACTS OF THE CASE|FACTS|LEGAL GROUNDS|STATUTORY CITATIONS|LEGAL BASIS|DEMAND|DEMANDS|CONSEQUENCE|CONSEQUENCES|GROUNDS|PRAYER|VERIFICATION|RECITALS|OPERATIVE|DEPONENT|SCHEDULE|ANNEXURE|PRELIMINARY OBJECTIONS|PARA-WISE REPLY|ADVOCATE SIGNATURE|NOTICEE COPY|RECORD COPY|COMMISSION JURISDICTION|COMPLAINT NO|DEFICIENCY OF SERVICE|UNFAIR TRADE PRACTICE|ATTESTATION BLOCK|DATE AND PARTIES|EXECUTION & WITNESS)\*{0,2}[:\-]?/i.test(rawTextForTests) ||
+        (/^(\*\*.*?\*\*)$/.test(rawTextForTests) && rawTextForTests.length < 90 && !/^(Sub|Subject)/i.test(cleanLine));
 
-      const isSubjectBox = /^(\*\*.*?\*\*)$/.test(line) && /LEGAL NOTICE/i.test(line) && !/^\d+\./.test(line);
+      const isSubjectBox = /^(\*\*.*?\*\*)$/.test(rawTextForTests) && /LEGAL NOTICE/i.test(rawTextForTests) && !/^\d+\./.test(rawTextForTests);
       const isSubjectLine = /^(Sub|Subject)\s*[:\-]/i.test(cleanLine);
       const isCourtHeader = /^(IN THE COURT OF|IN THE HIGH COURT|BEFORE THE HON'BLE|IN THE SUPREME COURT|BEFORE THE DISTRICT)/i.test(cleanLine);
       const isMainTitle = /^(BAIL APPLICATION|LEGAL NOTICE|REPLY TO LEGAL NOTICE|AFFIDAVIT|NON-DISCLOSURE AGREEMENT|PETITION UNDER|APPLICATION UNDER|COMMERCIAL LEASE|CONSUMER COMPLAINT)/i.test(cleanLine) && !isSectionHeader;

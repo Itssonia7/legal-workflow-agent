@@ -97,11 +97,11 @@ import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-def create_legal_docx(draft_text: str, title: str = "Legal Draft", doc_type: str = "bail") -> BytesIO:
+def create_legal_docx(draft_text: str, title: str = "Legal Draft", doc_type: str = "bail", margins_inches: float = 1.0, font_family: str = "Times New Roman") -> BytesIO:
     """
     Generates a professional court/advocate standard .docx document with:
-    - 1-inch margins on all sides
-    - Times New Roman 12pt font
+    - Configurable margins (default 1-inch)
+    - Configurable font (default Times New Roman 12pt)
     - 1.5 line spacing
     - Centered bold court titles and headers
     - First-line indented numbered legal paragraphs (0.4 in)
@@ -110,17 +110,17 @@ def create_legal_docx(draft_text: str, title: str = "Legal Draft", doc_type: str
     """
     doc = docx.Document()
     
-    # 1. Standard Legal Margins: 1 inch (25.4 mm)
+    # 1. Configurable Legal Margins
     section = doc.sections[0]
-    section.top_margin = Inches(1.0)
-    section.bottom_margin = Inches(1.0)
-    section.left_margin = Inches(1.0)
-    section.right_margin = Inches(1.0)
+    section.top_margin = Inches(margins_inches)
+    section.bottom_margin = Inches(margins_inches)
+    section.left_margin = Inches(margins_inches)
+    section.right_margin = Inches(margins_inches)
     
     # 2. Configure Normal Style
     normal_style = doc.styles['Normal']
     font = normal_style.font
-    font.name = 'Times New Roman'
+    font.name = font_family
     font.size = Pt(12)
     font.color.rgb = RGBColor(0x11, 0x18, 0x27)
     
@@ -312,6 +312,8 @@ class LegalDraftDocxExportView(views.APIView):
         title = request.data.get('title', 'Legal_Draft')
         doc_type = request.data.get('doc_type', 'bail')
         case_id = request.data.get('case_id')
+        margins = float(request.data.get('margin', 1.0))
+        font_family = request.data.get('font_family', 'Times New Roman')
 
         if not draft_text:
             return Response(
@@ -322,7 +324,13 @@ class LegalDraftDocxExportView(views.APIView):
         sanitized_title = re.sub(r'[^a-zA-Z0-9_\-]', '_', title)
         filename = f"{sanitized_title}_{doc_type}.docx"
 
-        buffer = create_legal_docx(draft_text, title=title, doc_type=doc_type)
+        buffer = create_legal_docx(
+            draft_text, 
+            title=title, 
+            doc_type=doc_type, 
+            margins_inches=margins, 
+            font_family=font_family
+        )
 
         response = HttpResponse(
             buffer.getvalue(),

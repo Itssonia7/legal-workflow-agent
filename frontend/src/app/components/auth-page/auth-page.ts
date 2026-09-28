@@ -1,11 +1,12 @@
 import { Component, signal, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { ChatWidgetComponent } from '../chat-widget/chat-widget';
 
 @Component({
   selector: 'app-auth-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, ChatWidgetComponent],
   templateUrl: './auth-page.html',
   styleUrl: './auth-page.css'
 })

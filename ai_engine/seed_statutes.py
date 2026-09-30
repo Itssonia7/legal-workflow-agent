@@ -67,7 +67,7 @@ def seed_huggingface_statutes():
     print(f"[💾 ChromaDB] Ingesting {len(documents)} structured statute vectors...")
     batch_size = 100
     for i in range(0, len(documents), batch_size):
-        collection.add(
+        collection.upsert(
             documents=documents[i:i + batch_size],
             metadatas=metadatas[i:i + batch_size],
             ids=ids[i:i + batch_size]

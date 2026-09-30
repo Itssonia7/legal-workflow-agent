@@ -7,7 +7,7 @@ export interface ChatMessageItem {
   id?: number;
   role: 'user' | 'assistant';
   content: string;
-  sources?: string[];
+  sources?: any[];
   grounded?: boolean;
   created_at?: string;
 }
@@ -68,7 +68,7 @@ export class ChatService {
     conversationId: number,
     query: string,
     onToken: (token: string) => void,
-    onComplete: (metadata: { grounded: boolean; full_text: string }) => void,
+    onComplete: (metadata: { grounded: boolean; full_text: string; sources?: any[] }) => void,
     onError: (err: any) => void,
     abortSignal?: AbortSignal
   ): Promise<void> {
@@ -126,7 +126,8 @@ export class ChatService {
               if (payload.done) {
                 onComplete({
                   grounded: payload.grounded ?? true,
-                  full_text: payload.full_text ?? ''
+                  full_text: payload.full_text ?? '',
+                  sources: payload.sources ?? []
                 });
               }
             } catch (e) {

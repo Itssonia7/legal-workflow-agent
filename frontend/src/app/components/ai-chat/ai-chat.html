@@ -140,9 +140,9 @@
             @if (msg.role === 'assistant' && msg.sources && msg.sources.length > 0) {
               <div class="pt-2 border-t border-gray-100 flex flex-wrap items-center gap-1.5">
                 <span class="text-[10px] font-bold text-gray-400 uppercase">Citations:</span>
-                @for (src of msg.sources; track src) {
+                @for (src of msg.sources; track $index) {
                   <span class="inline-flex items-center text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">
-                    📄 {{ src }}
+                    📄 {{ getSourceLabel(src) }}
                   </span>
                 }
               </div>

@@ -184,6 +184,7 @@ export class AiChat implements OnInit {
           role: 'assistant',
           content: metadata.full_text || this.currentStreamingText(),
           grounded: metadata.grounded,
+          sources: metadata.sources,
           created_at: new Date().toISOString()
         };
         this.messages.update(msgs => [...msgs, assistantMsg]);
@@ -228,6 +229,12 @@ export class AiChat implements OnInit {
       event.preventDefault();
       this.sendMessage();
     }
+  }
+
+  getSourceLabel(src: any): string {
+    if (!src) return '';
+    if (typeof src === 'string') return src;
+    return src.label || src.file || src.act || JSON.stringify(src);
   }
 
   formatContentHtml(text: string): string {

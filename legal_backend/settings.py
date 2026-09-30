@@ -152,11 +152,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Django REST Framework
+PUBLIC_CHAT_THROTTLE_RATE = config('PUBLIC_CHAT_THROTTLE_RATE', default='20/hour')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'public_chat': PUBLIC_CHAT_THROTTLE_RATE,
+    }
 }
+
 
 # Simple JWT settings
 SIMPLE_JWT = {

@@ -1,6 +1,8 @@
 import os
 import shutil
 import tempfile
+import chromadb
+from chromadb.utils import embedding_functions
 from unittest.mock import patch, MagicMock
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
@@ -12,6 +14,7 @@ from chat.models import Conversation, Message
 from ai_engine.chat_engine import (
     retrieve_chat_context_private,
     retrieve_chat_context_public,
+    generate_chat_stream,
     COSINE_DISTANCE_THRESHOLD
 )
 
@@ -38,6 +41,13 @@ class ChatBackendTests(TestCase):
         )
         self.client_b = Client.objects.create(lawyer=self.user_b, name='Client B')
         self.case_b = CaseFile.objects.create(lawyer=self.user_b, client=self.client_b, title='Case B')
+
+        # Create Admin User
+        self.admin_user = User.objects.create_user(
+            username='admin_user',
+            password='password123',
+            role='admin'
+        )
 
     # 1. Validation Test: User A cannot attach User B's case file
     def test_cannot_attach_other_user_case_file(self):
@@ -66,7 +76,20 @@ class ChatBackendTests(TestCase):
         }, format='json')
         self.assertEqual(patch_res.status_code, status.HTTP_400_BAD_REQUEST)
 
-    # 2. Owner Isolation: User A cannot view User B's conversations
+    # 2. Admin Role Bypass Test (role == 'admin')
+    def test_admin_role_can_attach_any_case_file(self):
+        self.api_client.force_authenticate(user=self.admin_user)
+
+        # Admin can attach User B's case_file without ownership error
+        response = self.api_client.post('/api/chat/conversations/', {
+            'title': 'Admin Oversight Consultation',
+            'case_file': self.case_b.id
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['case_file'], self.case_b.id)
+
+    # 3. Owner Isolation: User A cannot view User B's conversations
     def test_conversation_owner_isolation(self):
         conv_b = Conversation.objects.create(user=self.user_b, title='Secret B Chat')
 
@@ -78,7 +101,56 @@ class ChatBackendTests(TestCase):
         self.assertEqual(list_res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_res.data), 0)
 
-    # 3. Public Endpoint Isolation & No Auth Error on Stale Headers
+    # 4. Real Chroma Vector Retrieval Isolation Test
+    def test_real_chroma_user_isolation(self):
+        # Create in-memory EphemeralClient for isolated vector testing
+        client = chromadb.Client()
+        embedding_func = embedding_functions.DefaultEmbeddingFunction()
+        coll = client.create_collection(
+            name="test_isolation_vault",
+            embedding_function=embedding_func,
+            metadata={"hnsw:space": "cosine"}
+        )
+
+        # Ingest real vector chunks for User A's case and User B's case
+        coll.add(
+            ids=["chunk_a1", "chunk_b1"],
+            documents=[
+                "User A confidential agreement terms regarding solar property lease",
+                "User B confidential agreement terms regarding solar property lease"
+            ],
+            metadatas=[
+                {"source_type": "case_file", "source_file": "user_a_contract.pdf", "case_id": "101"},
+                {"source_type": "case_file", "source_file": "user_b_contract.pdf", "case_id": "202"}
+            ]
+        )
+
+        with patch('ai_engine.chat_engine.get_chroma_collection', return_value=coll):
+            # User A has allowed_case_ids = [101]
+            chunks_a, sources_a, grounded_a = retrieve_chat_context_private(
+                allowed_case_ids=[101],
+                query="solar property lease"
+            )
+            
+            # Assert User A ONLY retrieves Chunk A (case_id 101) and NEVER Chunk B (case_id 202)
+            self.assertTrue(grounded_a)
+            self.assertEqual(len(chunks_a), 1)
+            self.assertEqual(chunks_a[0]['case_id'], "101")
+            self.assertEqual(chunks_a[0]['source_file'], "user_a_contract.pdf")
+
+            # User B has allowed_case_ids = [202]
+            chunks_b, sources_b, grounded_b = retrieve_chat_context_private(
+                allowed_case_ids=[202],
+                query="solar property lease"
+            )
+
+            # Assert User B ONLY retrieves Chunk B (case_id 202) and NEVER Chunk A (case_id 101)
+            self.assertTrue(grounded_b)
+            self.assertEqual(len(chunks_b), 1)
+            self.assertEqual(chunks_b[0]['case_id'], "202")
+            self.assertEqual(chunks_b[0]['source_file'], "user_b_contract.pdf")
+
+    # 5. Public Endpoint Isolation & No Auth Error on Stale Headers
     @patch('ai_engine.chat_engine.get_chroma_collection')
     def test_public_endpoint_isolation(self, mock_chroma):
         mock_coll = MagicMock()
@@ -107,61 +179,41 @@ class ChatBackendTests(TestCase):
             where={"source_type": "statute"}
         )
 
-    # 4. Private Retrieval Isolation in Chroma Engine
-    @patch('ai_engine.chat_engine.get_chroma_collection')
-    def test_private_retrieval_case_isolation(self, mock_chroma):
-        mock_coll = MagicMock()
-        
-        def mock_query(query_texts, n_results, where=None):
-            if where and where.get("source_type") == "statute":
-                return {"documents": [[]], "distances": [[]], "metadatas": [[]]}
-            return {
-                "documents": [["User A case file content"]],
-                "distances": [[0.4]],
-                "metadatas": [[{"source_type": "case_file", "source_file": "doc_a.pdf", "case_id": str(self.case_a.id)}]]
-            }
+    # 6. Fallback Notice Exact Wording Verification
+    @patch('ai_engine.chat_engine.check_ollama_health', return_value=True)
+    @patch('ai_engine.chat_engine.ChatOllama')
+    def test_fallback_notice_exact_wording(self, mock_ollama_class, mock_health):
+        mock_llm = MagicMock()
+        mock_llm.stream.return_value = []
+        mock_ollama_class.return_value = mock_llm
 
-        mock_coll.query.side_effect = mock_query
-        mock_chroma.return_value = mock_coll
-
-        # Query private context for User A (allowed case IDs = [self.case_a.id])
-        allowed_case_ids = [self.case_a.id]
-        chunks, sources, grounded = retrieve_chat_context_private(
-            allowed_case_ids=allowed_case_ids,
-            query="Aadhaar breach facts"
+        # Test Private Fallback
+        private_gen = generate_chat_stream(
+            query="Chocolate cake recipe",
+            history=[],
+            context_chunks=[],
+            is_grounded=False,
+            is_public=False
         )
+        first_private_event = next(private_gen)
+        self.assertIn("I didn't find this in your database, so I'm answering based on general knowledge.", first_private_event)
 
-        self.assertTrue(grounded)
-        self.assertEqual(len(chunks), 1)
-        
-        # Verify where clause in query targeted only case_a.id
-        mock_coll.query.assert_any_call(
-            query_texts=["Aadhaar breach facts"],
-            n_results=4,
-            where={"$and": [{"source_type": "case_file"}, {"case_id": str(self.case_a.id)}]}
+        # Test Public Fallback
+        public_gen = generate_chat_stream(
+            query="Chocolate cake recipe",
+            history=[],
+            context_chunks=[],
+            is_grounded=False,
+            is_public=True
         )
+        first_public_event = next(public_gen)
+        self.assertIn("I didn't find this in the public legal database, so I'm answering based on general knowledge.", first_public_event)
 
-    # 5. Fallback Notice Verification when no chunks pass threshold
-    @patch('ai_engine.chat_engine.get_chroma_collection')
-    def test_fallback_notice_when_unsupported(self, mock_chroma):
-        mock_coll = MagicMock()
-        # Return distance 1.8 (above 1.15 threshold)
-        mock_coll.query.return_value = {
-            "documents": [["Irrelevant document"]],
-            "distances": [[1.8]],
-            "metadatas": [[{"source_type": "statute", "act_name": "Unrelated"}]]
-        }
-        mock_chroma.return_value = mock_coll
-
-        chunks, sources, grounded = retrieve_chat_context_public("How to make chocolate cake?")
-        self.assertFalse(grounded)
-        self.assertEqual(len(chunks), 0)
-
-    # 6. Public Throttling Test
+    # 7. Public Rate Limiting Test
+    @override_settings(PUBLIC_CHAT_THROTTLE_RATE='5/hour')
     def test_public_rate_limiting(self):
         client = APIClient()
-        # Send requests until throttled
-        for i in range(25):
+        for i in range(6):
             res = client.post('/api/chat/public/', {'query': 'hello'}, format='json')
             if res.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
                 break

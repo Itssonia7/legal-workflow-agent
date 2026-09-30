@@ -15,8 +15,14 @@ from ai_engine.chat_engine import (
     redact_pii
 )
 
+from django.conf import settings
+
 class PublicChatThrottle(AnonRateThrottle):
-    rate = '20/minute'
+    scope = 'public_chat'
+
+    def get_rate(self):
+        return getattr(settings, 'PUBLIC_CHAT_THROTTLE_RATE', '20/hour')
+
 
 
 class ConversationViewSet(viewsets.ModelViewSet):

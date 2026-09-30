@@ -29,3 +29,9 @@ media/
 # OS
 .DS_Store
 Thumbs.db
+
+# Vector DB & Node modules
+ai_engine/chroma_db/
+node_modules/
+frontend/node_modules/
+

@@ -220,3 +220,20 @@ class ChatBackendTests(TestCase):
                 break
         
         self.assertEqual(res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    # 8. Metric-Aware Threshold Test
+    def test_metric_aware_threshold(self):
+        from ai_engine.chat_engine import get_effective_distance_threshold
+
+        coll_l2 = MagicMock()
+        coll_l2.metadata = {"hnsw:space": "l2"}
+        self.assertEqual(get_effective_distance_threshold(coll_l2), 1.15)
+
+        coll_none = MagicMock()
+        coll_none.metadata = None
+        self.assertEqual(get_effective_distance_threshold(coll_none), 1.15)
+
+        coll_cosine = MagicMock()
+        coll_cosine.metadata = {"hnsw:space": "cosine"}
+        self.assertEqual(get_effective_distance_threshold(coll_cosine), 0.575)
+

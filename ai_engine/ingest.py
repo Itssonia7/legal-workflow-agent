@@ -46,11 +46,9 @@ def process_legal_document(pdf_path, case_id=None, doc_id=None):
     client = chromadb.PersistentClient(path=DB_PATH)
     embedding_func = embedding_functions.DefaultEmbeddingFunction()
     
-    # Initialize collection with cosine space setting
     collection = client.get_or_create_collection(
         name="legal_knowledge_vault",
-        embedding_function=embedding_func,
-        metadata={"hnsw:space": "cosine"}
+        embedding_function=embedding_func
     )
     
     # 1. Clean up existing chunks for this specific document ID (Idempotency check)

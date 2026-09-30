@@ -15,6 +15,7 @@ from ai_engine.chat_engine import (
     retrieve_chat_context_private,
     retrieve_chat_context_public,
     generate_chat_stream,
+    DISTANCE_THRESHOLD,
     COSINE_DISTANCE_THRESHOLD
 )
 

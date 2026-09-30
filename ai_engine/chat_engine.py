@@ -12,8 +12,9 @@ try:
 except ImportError:
     from utils import check_ollama_health
 
-# Configurable Cosine Distance Threshold (tuned on legal vs out-of-domain queries)
-COSINE_DISTANCE_THRESHOLD = 1.15
+# Configurable Distance Threshold (tuned on legal vs out-of-domain queries)
+DISTANCE_THRESHOLD = float(os.getenv("DISTANCE_THRESHOLD", "1.15"))
+COSINE_DISTANCE_THRESHOLD = DISTANCE_THRESHOLD  # Alias for backward compatibility
 
 # Aadhaar & PAN regex patterns
 AADHAAR_REGEX = re.compile(r'\b\d{4}\s?\d{4}\s?\d{4}\b')
@@ -33,15 +34,20 @@ def redact_pii(text: str) -> str:
 def get_chroma_collection():
     """
     Returns the persistent ChromaDB collection.
+    Checks and logs a warning if stored collection distance metric differs from expected.
     """
     db_path = os.path.join(os.path.dirname(__file__), "chroma_db")
     client = chromadb.PersistentClient(path=db_path)
     embedding_func = embedding_functions.DefaultEmbeddingFunction()
-    return client.get_or_create_collection(
+    collection = client.get_or_create_collection(
         name="legal_knowledge_vault",
-        embedding_function=embedding_func,
-        metadata={"hnsw:space": "cosine"}
+        embedding_function=embedding_func
     )
+    metric = (collection.metadata or {}).get("hnsw:space", "l2")
+    if metric != "l2":
+        print(f"[ChatEngine WARNING] ChromaDB collection distance metric is '{metric}'. DISTANCE_THRESHOLD={DISTANCE_THRESHOLD} is tuned for default L2 distance.")
+    return collection
+
 
 
 def retrieve_chat_context_private(allowed_case_ids: list, query: str, selected_case_id: str = None, k_case: int = 4, k_statute: int = 4):
@@ -91,7 +97,7 @@ def retrieve_chat_context_private(allowed_case_ids: list, query: str, selected_c
                 metas = case_results['metadatas'][0] if case_results.get('metadatas') else [{}] * len(docs)
                 
                 for doc, dist, meta in zip(docs, dists, metas):
-                    if dist <= COSINE_DISTANCE_THRESHOLD:
+                    if dist <= DISTANCE_THRESHOLD:
                         relevant_chunks.append({
                             "content": doc,
                             "type": "case_file",
@@ -118,7 +124,7 @@ def retrieve_chat_context_private(allowed_case_ids: list, query: str, selected_c
             metas = statute_results['metadatas'][0] if statute_results.get('metadatas') else [{}] * len(docs)
             
             for doc, dist, meta in zip(docs, dists, metas):
-                if dist <= COSINE_DISTANCE_THRESHOLD:
+                if dist <= DISTANCE_THRESHOLD:
                     act_name = meta.get("act_name", "Indian Statute")
                     sec_no = meta.get("section_no", "")
                     relevant_chunks.append({
@@ -160,7 +166,7 @@ def retrieve_chat_context_public(query: str, k: int = 5):
             metas = results['metadatas'][0] if results.get('metadatas') else [{}] * len(docs)
 
             for doc, dist, meta in zip(docs, dists, metas):
-                if dist <= COSINE_DISTANCE_THRESHOLD:
+                if dist <= DISTANCE_THRESHOLD:
                     act_name = meta.get("act_name", "Indian Statute")
                     sec_no = meta.get("section_no", "")
                     relevant_chunks.append({

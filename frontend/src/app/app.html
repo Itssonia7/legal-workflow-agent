@@ -1,76 +1,14 @@
 <!-- Wrapper Layout -->
 <div class="min-h-screen bg-gray-50/50 flex flex-col font-sans">
-  
-  <!-- UNAUTHENTICATED STATE: LOGIN / REGISTER -->
-  <div *ngIf="!authService.currentUser()" class="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950">
-    <div class="bg-white/10 backdrop-blur-xl border border-white/15 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6">
-      <div class="text-center space-y-2">
-        <h1 class="text-3xl font-extrabold text-white tracking-tight">Legal Workflow Agent</h1>
-        <p class="text-sm text-indigo-200">Local Multi-Agent RAG System</p>
-      </div>
 
-      <form (ngSubmit)="handleAuth()" class="space-y-4">
-        <div class="space-y-1">
-          <label class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Username</label>
-          <input 
-            type="text" 
-            [(ngModel)]="authData.username" 
-            name="username"
-            required
-            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white/10 transition"
-            placeholder="john_doe" />
-        </div>
-
-        <div *ngIf="!isLoginMode()" class="space-y-1">
-          <label class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Email Address</label>
-          <input 
-            type="email" 
-            [(ngModel)]="authData.email" 
-            name="email"
-            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white/10 transition"
-            placeholder="john@example.com" />
-        </div>
-
-        <div *ngIf="!isLoginMode()" class="space-y-1">
-          <label class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Phone</label>
-          <input 
-            type="text" 
-            [(ngModel)]="authData.phone" 
-            name="phone"
-            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white/10 transition"
-            placeholder="+91 XXXXX XXXXX" />
-        </div>
-
-        <div class="space-y-1">
-          <label class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Password</label>
-          <input 
-            type="password" 
-            [(ngModel)]="authData.password" 
-            name="password"
-            required
-            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white/10 transition"
-            placeholder="••••••••" />
-        </div>
-
-        <button 
-          type="submit"
-          class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-600/30 transition duration-300">
-          {{ isLoginMode() ? 'Access Console' : 'Register Account' }}
-        </button>
-      </form>
-
-      <div class="text-center pt-2">
-        <button 
-          (click)="toggleAuthMode()"
-          class="text-xs text-indigo-300 hover:text-white transition">
-          {{ isLoginMode() ? "Don't have an account? Sign Up" : 'Already have an account? Sign In' }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- UNAUTHENTICATED STATE: AUTH PAGE -->
+  @if (!authService.isLoggedIn()) {
+    <app-auth-page />
+  }
 
   <!-- AUTHENTICATED STATE: WORKFLOW MANAGER -->
-  <div *ngIf="authService.currentUser()" class="flex-1 flex overflow-hidden">
+  @if (authService.isLoggedIn()) {
+  <div class="flex-1 flex overflow-hidden">
     <!-- Sidebar Console -->
     <aside class="w-80 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col justify-between shrink-0">
       <div class="p-6 space-y-8">
@@ -85,9 +23,9 @@
 
         <!-- Sidebar Navigation -->
         <nav class="space-y-2">
-          <button 
+          <button
             (click)="activeTab.set('dashboard')"
-            [ngClass]="{'bg-indigo-600 text-white font-semibold': activeTab() === 'dashboard', 'hover:bg-slate-800/50 hover:text-white': activeTab() !== 'dashboard'}"
+            [class]="activeTab() === 'dashboard' ? 'bg-indigo-600 text-white font-semibold' : 'hover:bg-slate-800/50 hover:text-white'"
             class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3.5 text-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -95,9 +33,9 @@
             Case Dashboard
           </button>
 
-          <button 
+          <button
             (click)="activeTab.set('vault')"
-            [ngClass]="{'bg-indigo-600 text-white font-semibold': activeTab() === 'vault', 'hover:bg-slate-800/50 hover:text-white': activeTab() !== 'vault'}"
+            [class]="activeTab() === 'vault' ? 'bg-indigo-600 text-white font-semibold' : 'hover:bg-slate-800/50 hover:text-white'"
             class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3.5 text-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H20" />
@@ -105,9 +43,9 @@
             Document Vault
           </button>
 
-          <button 
+          <button
             (click)="activeTab.set('drafting')"
-            [ngClass]="{'bg-indigo-600 text-white font-semibold': activeTab() === 'drafting', 'hover:bg-slate-800/50 hover:text-white': activeTab() !== 'drafting'}"
+            [class]="activeTab() === 'drafting' ? 'bg-indigo-600 text-white font-semibold' : 'hover:bg-slate-800/50 hover:text-white'"
             class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3.5 text-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -115,9 +53,9 @@
             AI Drafting Studio
           </button>
 
-          <button 
+          <button
             (click)="activeTab.set('calendar')"
-            [ngClass]="{'bg-indigo-600 text-white font-semibold': activeTab() === 'calendar', 'hover:bg-slate-800/50 hover:text-white': activeTab() !== 'calendar'}"
+            [class]="activeTab() === 'calendar' ? 'bg-indigo-600 text-white font-semibold' : 'hover:bg-slate-800/50 hover:text-white'"
             class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3.5 text-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -133,7 +71,7 @@
           <p class="text-xs text-gray-500 uppercase font-semibold">Advocate Profile</p>
           <p class="text-sm font-bold text-white">{{ authService.currentUser()?.username }}</p>
         </div>
-        <button 
+        <button
           (click)="logout()"
           class="text-slate-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,13 +93,15 @@
 
       <!-- Panel Views -->
       <div class="p-8 flex-1">
-        <app-case-dashboard *ngIf="activeTab() === 'dashboard'"></app-case-dashboard>
-        <app-document-vault *ngIf="activeTab() === 'vault'"></app-document-vault>
-        <app-calendar *ngIf="activeTab() === 'calendar'"></app-calendar>
-
-        <!-- AI Drafting Studio Component -->
-        <app-drafting-studio *ngIf="activeTab() === 'drafting'"></app-drafting-studio>
+        @if (activeTab() === 'dashboard') { <app-case-dashboard /> }
+        @if (activeTab() === 'vault') { <app-document-vault /> }
+        @if (activeTab() === 'calendar') { <app-calendar /> }
+        @if (activeTab() === 'drafting') { <app-drafting-studio /> }
       </div>
     </main>
   </div>
+  }
 </div>
+
+
+ okay so we were also thinking of adding a chatbot on this login and register page

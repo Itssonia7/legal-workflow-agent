@@ -11,21 +11,18 @@ export class AuthService {
   private http = inject(HttpClient);
 
   // Auth state signals
-  isLoggedIn = signal<boolean>(!!localStorage.getItem('access_token'));
+  // Always start as false so the auth page is shown on every visit,
+  // even if a token exists in localStorage.
+  isLoggedIn = signal<boolean>(false);
   currentUser = signal<any>(null);
 
   constructor() {
-    try {
-      const cachedUser = localStorage.getItem('user');
-      if (cachedUser) {
-        this.currentUser.set(JSON.parse(cachedUser));
-      }
-    } catch {
-      localStorage.removeItem('user');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      this.isLoggedIn.set(false);
-    }
+    // Clear any stored session on every app load so the user always
+    // lands on the login/register page.
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    this.currentUser.set(null);
   }
 
   /**

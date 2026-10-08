@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     # Local
     'accounts',
     'cases',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -81,16 +82,26 @@ WSGI_APPLICATION = 'legal_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='legal_workflow_db'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+USE_SQLITE = config('USE_SQLITE', default=False, cast=bool)
+
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='legal_workflow_db'),
+            'USER': config('DB_USER', default='postgres'),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }
 
 
 # Password validation
@@ -141,11 +152,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Django REST Framework
+PUBLIC_CHAT_THROTTLE_RATE = config('PUBLIC_CHAT_THROTTLE_RATE', default='20/hour')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'public_chat': PUBLIC_CHAT_THROTTLE_RATE,
+    }
 }
+
 
 # Simple JWT settings
 SIMPLE_JWT = {

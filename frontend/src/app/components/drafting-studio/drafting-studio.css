@@ -1,1 +1,227 @@
-/* Drafting Studio component styles */
+/* ==============================================================================
+   Drafting Studio Legal Document & Print Styling
+   ============================================================================== */
+
+/* A4 Legal Sheet Simulation */
+.legal-page-canvas {
+  background: #ffffff;
+  min-height: 1080px;
+  width: 100%;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Times New Roman', Times, 'Liberation Serif', Georgia, serif;
+  color: #111827;
+  line-height: 1.6;
+}
+
+/* Diagonal Watermark for Review Status */
+.watermark-pending {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: rgba(220, 38, 38, 0.04);
+  pointer-events: none;
+  white-space: nowrap;
+  user-select: none;
+  z-index: 0;
+  border: 3px dashed rgba(220, 38, 38, 0.06);
+  padding: 12px 36px;
+  border-radius: 8px;
+}
+
+.watermark-accepted {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: rgba(16, 185, 129, 0.04);
+  pointer-events: none;
+  white-space: nowrap;
+  user-select: none;
+  z-index: 0;
+  border: 3px solid rgba(16, 185, 129, 0.06);
+  padding: 12px 36px;
+  border-radius: 8px;
+}
+
+/* ==============================================================================
+   Indian Legal Document Typographic Elements
+   ============================================================================== */
+
+/* Advocate / Law Chambers Letterhead Masthead */
+.legal-letterhead {
+  text-align: center;
+  border-bottom: 2px double #334155;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.legal-letterhead-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.legal-letterhead-details {
+  font-size: 0.85rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+/* Mode of Transmission & Dispatch Tracking */
+.legal-trans-mode {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+/* Main Document Title (e.g. LEGAL NOTICE, BAIL APPLICATION) */
+.legal-doc-title {
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #020617;
+  margin: 18px 0;
+  padding: 4px 0;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+/* Recipient Address Block */
+.legal-recipient-block {
+  text-align: left;
+  line-height: 1.45;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+}
+
+/* Subject Line Box */
+.legal-subject-box {
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: justify;
+  line-height: 1.5;
+  margin: 14px 0 16px 0;
+  padding: 6px 12px;
+  background-color: #f8fafc;
+  border-left: 3px solid #0f172a;
+}
+
+/* Salutation & Authorization */
+.legal-salutation {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.legal-auth-statement {
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: justify;
+  line-height: 1.55;
+  margin-bottom: 12px;
+}
+
+/* Numbered Legal Paragraphs (Classical Rhythm) */
+.legal-paragraph {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  text-align: justify;
+  margin-bottom: 12px;
+  text-indent: 2.2rem;
+}
+
+/* Un-indented Legal Text Blocks (e.g. Demands or Statutory Citations) */
+.legal-body-text {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  text-align: justify;
+  margin-bottom: 12px;
+}
+
+/* Sub-clause lists (e.g. (a), (b), (c)) */
+.legal-subclause {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+  margin-bottom: 8px;
+  padding-left: 1.5rem;
+}
+
+/* Section Subheadings (e.g. PRELIMINARY OBJECTIONS, VERIFICATION, GROUNDS) */
+.legal-section-header {
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0f172a;
+  margin-top: 18px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 2px;
+}
+
+/* Signature & Closing Block */
+.legal-signature-block {
+  text-align: right;
+  margin-top: 28px;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.legal-copy-to {
+  text-align: left;
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+/* Print Styles: Isolates the Legal Document Sheet to standard A4 printing */
+@media print {
+  /* Hide all UI elements, navigation, toolbar, sidebar, and banners */
+  body * {
+    visibility: hidden;
+  }
+
+  .legal-page-canvas,
+  .legal-page-canvas * {
+    visibility: visible;
+  }
+
+  .legal-page-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    min-height: 100% !important;
+    padding: 20mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+

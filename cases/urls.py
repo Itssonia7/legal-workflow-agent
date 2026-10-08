@@ -15,10 +15,12 @@ router.register(r'schedules', HearingScheduleViewSet, basename='schedule')
 router.register(r'documents', LegalDocumentViewSet, basename='document')
 router.register(r'draft-history', DraftHistoryViewSet, basename='draft-history')
 
-from .views_ai import DocumentUploadAndIngestView, AIDraftGeneratorView
+from .views_ai import DocumentUploadAndIngestView, AIDraftGeneratorView, LegalDraftDocxExportView
 
 urlpatterns = [
     path('documents/upload/', DocumentUploadAndIngestView.as_view(), name='document-upload'), # Match specific path first!
     path('', include(router.urls)),
     path('draft/', AIDraftGeneratorView.as_view(), name='ai-draft'),
+    path('draft/export-docx/', LegalDraftDocxExportView.as_view(), name='ai-draft-docx'),
 ]
+

@@ -11,5 +11,8 @@ class AgentState(TypedDict):
     critic_feedback: str     # Notes from the Critic agent if the draft has errors
     revision_count: int      # To ensure the agents don't get stuck in an infinite loop
     is_approved: bool        # Becomes True when the Critic is finally satisfied
-    step_logs: List[str]     # New: A list to store progress updates for the frontend UI
-    case_id: str             # New: The active case file ID to isolate document context
+    step_logs: List[str]     # Progress updates for the frontend UI
+    case_id: str             # The active case file ID to isolate document context
+    doc_type: str            # Document archetype: 'bail', 'notice', 'affidavit', 'contract', 'auto'
+    user_feedback: str       # Lawyer's direct revision instructions (Human-in-the-Loop)
+    previous_draft: str      # Previous draft text before lawyer requested changes

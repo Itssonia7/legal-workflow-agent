@@ -46,6 +46,14 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
+### 4. Seeding the Vector Store
+The ChromaDB vector database (`ai_engine/chroma_db`) stores statutory knowledge and is excluded from git (`.gitignore`).
+Run `ai_engine/seed_statutes.py` once after initial setup to populate the vector store with statutory law chunks:
+```bash
+python ai_engine/seed_statutes.py
+```
+*Note: The seeding script uses idempotent upsert (`collection.upsert`), so running it multiple times will not create duplicate chunks.*
+
 ---
 
 ## 🚀 Running the Application

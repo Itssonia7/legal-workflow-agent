@@ -1,17 +1,24 @@
 <div class="bg-white/10 backdrop-blur-xl border border-white/15 rounded-3xl shadow-2xl flex flex-col h-full overflow-hidden">
 
   <!-- Header -->
-  <div class="px-6 py-4 border-b border-white/10 flex items-center gap-3 shrink-0">
-    <div class="relative">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-      </svg>
-      <span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-slate-900"></span>
+  <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+        <span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-slate-900"></span>
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-white">Public Assistant</h3>
+        <p class="text-[11px] text-indigo-300">Public Statutes & General Info</p>
+      </div>
     </div>
-    <div>
-      <h3 class="text-sm font-bold text-white">Legal Assistant</h3>
-      <p class="text-[11px] text-indigo-300">Ask about the system</p>
-    </div>
+  </div>
+
+  <!-- Disclaimer Banner -->
+  <div class="bg-indigo-900/50 border-b border-white/10 px-4 py-2 text-[11px] text-indigo-200 flex items-center gap-1.5">
+    <span>ℹ️ General info only (not legal advice). Sign in for full case file assistant.</span>
   </div>
 
   <!-- Messages Area -->
@@ -20,9 +27,31 @@
       <div [class]="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
         <div [class]="msg.role === 'user'
           ? 'bg-indigo-600/80 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%] text-sm'
-          : 'bg-white/10 text-indigo-100 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%] text-sm border border-white/5'">
-          {{ msg.text }}
+          : 'bg-white/10 text-indigo-100 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%] text-sm border border-white/5 space-y-1'">
+          <div>{{ msg.text }}</div>
+          @if (msg.role === 'bot' && msg.grounded === false) {
+            <div class="text-[10px] text-amber-300 font-semibold pt-1 border-t border-white/10">
+              ⚠️ Answered based on general knowledge
+            </div>
+          }
         </div>
+      </div>
+    }
+
+    <!-- Live Streaming Message -->
+    @if (isGenerating()) {
+      <div class="flex justify-start">
+        <div class="bg-white/10 text-indigo-100 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%] text-sm border border-white/5 space-y-1">
+          <div class="text-[10px] text-indigo-400 font-bold animate-pulse">Assistant is typing...</div>
+          <div>{{ streamingBotText() }}</div>
+        </div>
+      </div>
+    }
+
+    <!-- Error notice -->
+    @if (errorMessage()) {
+      <div class="p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs">
+        ⚠️ {{ errorMessage() }}
       </div>
     }
   </div>
@@ -32,14 +61,15 @@
     <input
       type="text"
       autocomplete="off"
-      [value]="inputValue"
-      (input)="inputValue = $any($event.target).value"
+      [(ngModel)]="inputValue"
       (keydown)="onKeydown($event)"
-      class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white/10 transition"
-      placeholder="Type a message…" />
+      [disabled]="isGenerating()"
+      class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:bg-white/10 transition disabled:opacity-50"
+      placeholder="Ask a public legal query…" />
     <button
       (click)="send()"
-      class="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition duration-300 shrink-0">
+      [disabled]="isGenerating() || !inputValue.trim()"
+      class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition duration-300 shrink-0">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
       </svg>

@@ -26,7 +26,7 @@
               type="file" 
               id="fileInput"
               (change)="onFileSelected($event)" 
-              accept=".pdf"
+              accept=".pdf, .png, .jpg, .jpeg"
               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
             <div class="space-y-2">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,7 +35,7 @@
               <div class="text-sm font-semibold text-gray-700">
                 {{ selectedFile ? selectedFile.name : 'Choose a file or drag it here' }}
               </div>
-              <p class="text-xs text-gray-400">PDF files only (Max 10MB)</p>
+              <p class="text-xs text-gray-400">PDF or Image files (Max 10MB)</p>
             </div>
           </div>
         </div>
@@ -67,20 +67,21 @@
               <th class="pb-3">File Name</th>
               <th class="pb-3">Associated Case</th>
               <th class="pb-3">Upload Date</th>
-              <th class="pb-3 text-right">RAG status</th>
+              <th class="pb-3 text-center">RAG status</th>
+              <th class="pb-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 text-sm">
             <tr *ngFor="let doc of documents" class="hover:bg-gray-50/50 transition">
               <td class="py-4 pr-3 font-semibold text-gray-700 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
                 </svg>
-                {{ doc.name }}
+                <span class="truncate max-w-[200px]" [title]="doc.name">{{ doc.name }}</span>
               </td>
               <td class="py-4 text-gray-500">{{ doc.case_title }}</td>
               <td class="py-4 text-gray-500">{{ doc.uploaded_at | date:'medium' }}</td>
-              <td class="py-4 text-right">
+              <td class="py-4 text-center">
                 <span 
                   [ngClass]="{
                     'bg-emerald-50 text-emerald-600 border border-emerald-100': doc.indexed,
@@ -90,9 +91,22 @@
                   {{ doc.indexed ? 'Chroma Indexed' : 'Processing' }}
                 </span>
               </td>
+              <td class="py-4 text-right">
+                <button
+                  (click)="deleteDocument(doc)"
+                  [disabled]="deletingId === doc.id"
+                  title="Delete document and remove from Vector Vault"
+                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 inline-flex items-center gap-1 text-xs font-medium"
+                >
+                  <svg *ngIf="deletingId !== doc.id" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span *ngIf="deletingId === doc.id" class="text-xs text-red-500">Deleting...</span>
+                </button>
+              </td>
             </tr>
             <tr *ngIf="documents.length === 0">
-              <td colspan="4" class="py-12 text-center text-gray-400">
+              <td colspan="5" class="py-12 text-center text-gray-400">
                 No documents uploaded yet. Upload a PDF case folder to index it.
               </td>
             </tr>

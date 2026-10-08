@@ -1,10 +1,11 @@
 from rest_framework import viewsets, permissions
-from .models import Client, CaseFile, HearingSchedule, LegalDocument
+from .models import Client, CaseFile, HearingSchedule, LegalDocument, DraftHistory
 from .serializers import (
     ClientSerializer,
     CaseFileSerializer,
     HearingScheduleSerializer,
-    LegalDocumentSerializer
+    LegalDocumentSerializer,
+    DraftHistorySerializer
 )
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -65,3 +66,12 @@ class LegalDocumentViewSet(viewsets.ModelViewSet):
             
         # 3. Delete database record
         instance.delete()
+
+class DraftHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = DraftHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.role == 'admin':
+            return DraftHistory.objects.all().order_by('-created_at')
+        return DraftHistory.objects.filter(lawyer=self.request.user).order_by('-created_at')

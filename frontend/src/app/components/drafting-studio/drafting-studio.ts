@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LegalService } from '../../services/legal.service';
@@ -57,6 +57,12 @@ export class DraftingStudio implements OnInit {
     'Include clear counsel verification and identification details'
   ];
 
+  // Draft History states
+  draftHistory: any[] = [];
+  historyLoading = false;
+  historyError = false;
+  expandedDraftId: number | null = null;
+
   constructor(
     private legalService: LegalService,
     private cdr: ChangeDetectorRef
@@ -64,6 +70,7 @@ export class DraftingStudio implements OnInit {
 
   ngOnInit(): void {
     this.loadCases();
+    this.loadDraftHistory();
   }
 
   loadCases(): void {
@@ -76,6 +83,24 @@ export class DraftingStudio implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Error fetching cases in drafting studio:', err)
+    });
+  }
+
+  loadDraftHistory(): void {
+    this.historyLoading = true;
+    this.historyError = false;
+    this.legalService.getDraftHistory().subscribe({
+      next: (data) => {
+        this.draftHistory = data;
+        this.historyLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error fetching draft history:', err);
+        this.historyLoading = false;
+        this.historyError = true;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -99,6 +124,8 @@ export class DraftingStudio implements OnInit {
           }
         ];
         this.cdr.detectChanges();
+        // Refresh history so the new record appears immediately
+        this.loadDraftHistory();
       },
       error: (err) => {
         this.drafting = false;
@@ -109,6 +136,19 @@ export class DraftingStudio implements OnInit {
     });
   }
 
+  toggleExpandDraft(id: number): void {
+    this.expandedDraftId = this.expandedDraftId === id ? null : id;
+  }
+
+  reusePrompt(item: any): void {
+    this.draftPrompt = item.prompt;
+    if (item.case_file) {
+      this.selectedCaseId = item.case_file;
+    }
+    // Scroll to top so user sees the pre-filled form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.cdr.detectChanges();
+  }
   acceptDraft(): void {
     this.draftStatus = 'accepted';
     this.cdr.detectChanges();

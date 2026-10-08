@@ -1,0 +1,725 @@
+merged
+  result 100644 9d9cb307a5aca089cf478d32ec9e0aa1e6d93cf8 .env.example
+  our    100644 bd46255f36767ba3fb21ddd465a38919652cd105 .env.example
+@@ -6,6 +6,6 @@
+ # Database (PostgreSQL)
+ DB_NAME=legal_workflow_db
+ DB_USER=postgres
+-DB_PASSWORD=your-db-password
++DB_PASSWORD=DB_PASSWORD
+ DB_HOST=localhost
+ DB_PORT=5432
+merged
+  result 100644 196709d7733edc3d357e567c628865a84dcd9dad cases/admin.py
+  our    100644 8c38f3f3dad51e4585f3984282c2a4bec5349c1e cases/admin.py
+@@ -1,3 +1,4 @@
+ from django.contrib import admin
++from .models import DraftHistory
+ 
+-# Register your models here.
++admin.site.register(DraftHistory)
+merged
+  result 100644 41427090f84aac8b17b95439750e1987df8d3149 cases/models.py
+  our    100644 2aea348690879f90260f1216b1905371f063313c cases/models.py
+@@ -55,6 +55,29 @@
+     def __str__(self):
+         return self.name
+ 
++class DraftHistory(models.Model):
++    lawyer = models.ForeignKey(
++        settings.AUTH_USER_MODEL,
++        on_delete=models.CASCADE,
++        related_name='draft_histories'
++    )
++    case_file = models.ForeignKey(
++        CaseFile,
++        on_delete=models.CASCADE,
++        related_name='drafts'
++    )
++    prompt = models.TextField()
++    draft_text = models.TextField()
++    is_approved = models.BooleanField(default=False)
++    revision_count = models.IntegerField(default=0)
++    created_at = models.DateTimeField(auto_now_add=True)
++
++    class Meta:
++        ordering = ['-created_at']
++
++    def __str__(self):
++        return f"Draft by {self.lawyer} for {self.case_file.title} on {self.created_at:%Y-%m-%d}"
++
+ # Signals to trigger Celery tasks
+ from django.db.models.signals import post_save, post_delete
+ from django.dispatch import receiver
+merged
+  result 100644 47e297b1a919f089ffdfc8afb99f833d93653693 cases/serializers.py
+  our    100644 37177173932cf7fca67fd0d1783f972badb6a443 cases/serializers.py
+@@ -1,5 +1,5 @@
+ from rest_framework import serializers
+-from .models import Client, CaseFile, HearingSchedule, LegalDocument
++from .models import Client, CaseFile, HearingSchedule, LegalDocument, DraftHistory
+ 
+ class ClientSerializer(serializers.ModelSerializer):
+     lawyer = serializers.ReadOnlyField(source='lawyer.username')
+@@ -29,3 +29,15 @@
+     class Meta:
+         model = LegalDocument
+         fields = '__all__'
++
++class DraftHistorySerializer(serializers.ModelSerializer):
++    case_title = serializers.ReadOnlyField(source='case_file.title')
++    lawyer_username = serializers.ReadOnlyField(source='lawyer.username')
++
++    class Meta:
++        model = DraftHistory
++        fields = [
++            'id', 'lawyer', 'lawyer_username', 'case_file', 'case_title',
++            'prompt', 'draft_text', 'is_approved', 'revision_count', 'created_at'
++        ]
++        read_only_fields = fields
+changed in both
+  base   100644 ff54af470d5ded1b7493b051bdadc7583f5f124c cases/urls.py
+  our    100644 9caa28ff98d45e6c8b6cc53a1e412bff139e1c0f cases/urls.py
+  their  100644 9fc67bb0acbd188f3e9113ae733af886e82b837f cases/urls.py
+@@ -4,7 +4,8 @@
+     ClientViewSet,
+     CaseFileViewSet,
+     HearingScheduleViewSet,
+-    LegalDocumentViewSet
++    LegalDocumentViewSet,
++    DraftHistoryViewSet
+ )
+ 
+ router = DefaultRouter()
+@@ -12,6 +13,7 @@
+ router.register(r'cases', CaseFileViewSet, basename='case')
+ router.register(r'schedules', HearingScheduleViewSet, basename='schedule')
+ router.register(r'documents', LegalDocumentViewSet, basename='document')
++router.register(r'draft-history', DraftHistoryViewSet, basename='draft-history')
+ 
+ from .views_ai import DocumentUploadAndIngestView, AIDraftGeneratorView, LegalDraftDocxExportView
+ 
+changed in both
+  base   100644 00af039bff6cdeb9d3f6bab956ad36f93d543f8d cases/views.py
+  our    100644 c19850e2027848a6e36d88393188565385b25819 cases/views.py
+  their  100644 4e26d981c8c001425666eb666a8095a5c1c4eb25 cases/views.py
+@@ -1,10 +1,11 @@
+ from rest_framework import viewsets, permissions
+-from .models import Client, CaseFile, HearingSchedule, LegalDocument
++from .models import Client, CaseFile, HearingSchedule, LegalDocument, DraftHistory
+ from .serializers import (
+     ClientSerializer,
+     CaseFileSerializer,
+     HearingScheduleSerializer,
+-    LegalDocumentSerializer
++    LegalDocumentSerializer,
++    DraftHistorySerializer
+ )
+ 
+ class ClientViewSet(viewsets.ModelViewSet):
+@@ -51,6 +52,7 @@
+             return LegalDocument.objects.all()
+         return LegalDocument.objects.filter(case_file__lawyer=self.request.user).order_by('-uploaded_at')
+ 
++<<<<<<< .our
+     def perform_destroy(self, instance):
+         doc_id = instance.id
+         # 1. Clean up vectors from ChromaDB
+@@ -65,3 +67,14 @@
+             
+         # 3. Delete database record
+         instance.delete()
++=======
++class DraftHistoryViewSet(viewsets.ReadOnlyModelViewSet):
++    serializer_class = DraftHistorySerializer
++    permission_classes = [permissions.IsAuthenticated]
++
++    def get_queryset(self):
++        if self.request.user.role == 'admin':
++            return DraftHistory.objects.all().order_by('-created_at')
++        return DraftHistory.objects.filter(lawyer=self.request.user).order_by('-created_at')
++
++>>>>>>> .their
+changed in both
+  base   100644 5bd3d814820c2b45915c6ba9229a8a89999717ef cases/views_ai.py
+  our    100644 e6b2518c6daf76c4cdb6f204e1400bb6e56994a2 cases/views_ai.py
+  their  100644 d5c57782ddc5036a46ba8231e410d1a212f76e70 cases/views_ai.py
+@@ -1,17 +1,20 @@
+ import os
+ import hashlib
++import logging
+ from rest_framework import views, status, permissions
+ from rest_framework.response import Response
+ from django.shortcuts import get_object_or_404
+ from django.conf import settings
+ 
+-from .models import CaseFile, LegalDocument
++from .models import CaseFile, LegalDocument, DraftHistory
+ from .serializers import LegalDocumentSerializer
+ 
+ # Import AI Engine components
+ from ai_engine.ingest import process_legal_document
+ from ai_engine.graph import app as ai_app
+ 
++logger = logging.getLogger(__name__)
++
+ class DocumentUploadAndIngestView(views.APIView):
+     """
+     POST /api/cases/documents/upload/
+@@ -260,6 +263,7 @@
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+ 
++        # Verify the case belongs to request.user before touching the AI engine
+         case_file = get_object_or_404(CaseFile, id=case_id, lawyer=request.user) if case_id else None
+ 
+         print(f"[Backend] Starting LangGraph multi-agent system with prompt: {user_prompt} for Case ID: {case_id}, doc_type: {doc_type}")
+@@ -281,7 +285,27 @@
+         try:
+             # Execute the LangGraph loop (limit depth to 20 steps to allow enough drafting cycles)
+             result = ai_app.invoke(initial_state, config={"recursion_limit": 20})
+-            
++
++            # --- Persist draft history (additive; failure must not break the response) ---
++            draft_history_id = None
++            if case_file:
++                try:
++                    history_obj = DraftHistory.objects.create(
++                        lawyer=request.user,
++                        case_file=case_file,
++                        prompt=user_prompt,
++                        draft_text=result.get("current_draft", ""),
++                        is_approved=result.get("is_approved", False),
++                        revision_count=result.get("revision_count", 0),
++                    )
++                    draft_history_id = history_obj.id
++                except Exception as save_err:
++                    logger.error(
++                        "[DraftHistory] Failed to save draft history for user=%s case=%s: %s",
++                        request.user.id, case_id, save_err
++                    )
++            # -------------------------------------------------------------------------
++
+             return Response({
+                 "user_prompt": result.get("user_prompt"),
+                 "context_documents": result.get("context_documents"),
+@@ -290,9 +314,13 @@
+                 "revision_count": result.get("revision_count"),
+                 "critic_feedback": result.get("critic_feedback"),
+                 "step_logs": result.get("step_logs", []),
++<<<<<<< .our
+                 "doc_type": result.get("doc_type", doc_type)
++=======
++                "draft_history_id": draft_history_id,
++>>>>>>> .their
+             }, status=status.HTTP_200_OK)
+-            
++
+         except Exception as e:
+             return Response(
+                 {"error": f"LangGraph execution failed: {str(e)}"},
+@@ -300,6 +328,7 @@
+             )
+ 
+ 
++<<<<<<< .our
+ class LegalDraftDocxExportView(views.APIView):
+     """
+     POST /api/cases/draft/export-docx/
+@@ -339,4 +368,6 @@
+         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+         return response
+ 
++=======
++>>>>>>> .their
+ 
+changed in both
+  base   100644 68756992dd4c7f36df304200854be2dbc29f06d0 frontend/src/app/components/drafting-studio/drafting-studio.html
+  our    100644 f5351723a96be2000092ba6ab9743bcd3127507e frontend/src/app/components/drafting-studio/drafting-studio.html
+  their  100644 c6afabad422f05d2e57572e8f13f9c54e71ce96b frontend/src/app/components/drafting-studio/drafting-studio.html
+@@ -1,3 +1,4 @@
++<<<<<<< .our
+ <div class="space-y-6 max-w-6xl mx-auto pb-16">
+   <!-- Executive Intro Banner -->
+   <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-sm space-y-2 border border-slate-800">
+@@ -103,8 +104,64 @@
+       <!-- Connector 1 -->
+       <div class="hidden md:block h-0.5 w-12 bg-slate-200 relative">
+         <span class="absolute h-1.5 w-1.5 rounded-full bg-slate-700 top-[-2px] left-0 animate-[ping_1.5s_infinite]"></span>
++=======
++<!-- Two-column layout on large screens: left = form+output, right = history panel -->
++<div class="w-full max-w-screen-xl mx-auto lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
++
++  <!-- ===== LEFT COLUMN: existing content ===== -->
++  <div class="space-y-6">
++
++    <!-- Intro Banner -->
++    <div class="bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-2xl p-6 shadow-md space-y-2">
++      <h2 class="text-2xl font-bold">Local AI Legal Generation</h2>
++      <p class="text-sm text-indigo-200">
++        Select a case context and enter your legal drafting requirements. Our Multi-Agent system (Researcher, Drafter, and Critic) will retrieve matching case details and Indian statutory laws from ChromaDB to compile a verified draft.
++      </p>
++    </div>
++
++    <!-- Input Panel -->
++    <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
++      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
++        <!-- Case Selection Dropdown -->
++        <div class="space-y-2">
++          <label class="text-sm font-bold text-gray-800">Target Case File Context</label>
++          <select 
++            [(ngModel)]="selectedCaseId" 
++            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition">
++            <option *ngFor="let c of cases" [value]="c.id">
++              {{ c.title }} (Client: {{ c.client_name || c.client }})
++            </option>
++            <option *ngIf="cases.length === 0" [value]="null" disabled>
++              No cases available. Please create a case first.
++            </option>
++          </select>
++        </div>
+       </div>
+ 
++      <!-- Prompt Area -->
++      <div class="space-y-2">
++        <label class="text-sm font-bold text-gray-800">Drafting Prompt</label>
++        <textarea 
++          [(ngModel)]="draftPrompt" 
++          rows="3"
++          placeholder="e.g., Draft a 3-sentence bail application for a minor accused of theft under section 379 IPC. Highlight that this is their first offense..."
++          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition"></textarea>
++>>>>>>> .their
++      </div>
++      
++      <button 
++        (click)="generateLegalDraft()"
++        [disabled]="drafting || !draftPrompt.trim() || !selectedCaseId"
++        class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white px-6 py-3.5 rounded-xl font-bold transition flex items-center justify-center gap-3">
++        <svg *ngIf="drafting" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
++          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
++          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
++        </svg>
++        {{ drafting ? 'Executing Multi-Agent Loop...' : 'Generate Verified Draft' }}
++      </button>
++    </div>
++
++<<<<<<< .our
+       <!-- Drafter -->
+       <div class="flex flex-col items-center space-y-2">
+         <div class="h-12 w-12 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl flex items-center justify-center shadow-2xs">
+@@ -128,8 +185,58 @@
+         </div>
+         <span class="text-xs font-semibold text-slate-800">3. Verification Critic</span>
+         <span class="text-[11px] text-slate-500">Cross-checking Facts & Citations</span>
++=======
++    <!-- Drafting Progress Pipeline Animations -->
++    <div *ngIf="drafting" class="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm space-y-6 text-center">
++      <h3 class="font-bold text-gray-800">LangGraph Pipeline In Progress</h3>
++      
++      <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 pt-4">
++        <!-- Researcher -->
++        <div class="flex flex-col items-center space-y-2">
++          <div class="h-14 w-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center relative shadow-sm">
++            <span class="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-indigo-500 animate-ping"></span>
++            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
++            </svg>
++          </div>
++          <span class="text-xs font-bold text-gray-600">1. Researcher Agent</span>
++          <span class="text-[10px] text-gray-400">Extracting Terms &amp; Searching ChromaDB</span>
++        </div>
++
++        <!-- Line 1 -->
++        <div class="hidden md:block h-0.5 w-12 bg-indigo-100 relative">
++          <span class="absolute h-2 w-2 rounded-full bg-indigo-500 top-[-3px] left-0 animate-[ping_1.5s_infinite]"></span>
++        </div>
++
++        <!-- Drafter -->
++        <div class="flex flex-col items-center space-y-2">
++          <div class="h-14 w-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
++            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
++            </svg>
++          </div>
++          <span class="text-xs font-bold text-gray-600">2. Drafter Agent</span>
++          <span class="text-[10px] text-gray-400">Composing Document Draft via Llama 3</span>
++        </div>
++
++        <!-- Line 2 -->
++        <div class="hidden md:block h-0.5 w-12 bg-indigo-100"></div>
++
++        <!-- Critic -->
++        <div class="flex flex-col items-center space-y-2">
++          <div class="h-14 w-14 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
++            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
++            </svg>
++          </div>
++          <span class="text-xs font-bold text-gray-600">3. Critic Agent</span>
++          <span class="text-[10px] text-gray-400">Verifying Citations &amp; Fact Consistency</span>
++        </div>
++>>>>>>> .their
+       </div>
++      <p class="text-xs text-amber-500 font-semibold animate-pulse pt-2">Note: Local generation may take up to 60-90 seconds to run verification iterations.</p>
+     </div>
++<<<<<<< .our
+     <p class="text-xs text-slate-500 font-medium pt-2">Llama 3 verification loop operates in real-time across objective statutes and client evidence.</p>
+   </div>
+ 
+@@ -232,9 +339,30 @@
+           </svg>
+           <span>{{ copySuccess ? 'Copied' : 'Copy' }}</span>
+         </button>
++=======
++
++    <!-- Output Panel -->
++    <div *ngIf="draftResult" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
++      <!-- Main Draft (2/3 width) -->
++      <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4 lg:col-span-2">
++        <div class="flex items-center justify-between">
++          <h3 class="font-bold text-gray-800">Final Legal Draft</h3>
++          <span [ngClass]="{'bg-emerald-50 text-emerald-600 border-emerald-100': draftResult.is_approved, 'bg-amber-50 text-amber-600 border-amber-100': !draftResult.is_approved}" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold border">
++            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
++              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
++            </svg>
++            {{ draftResult.is_approved ? 'Approved by Critic' : 'Revision Limit Reached' }}
++          </span>
++        </div>
++        
++        <!-- Draft Body -->
++        <div class="bg-gray-50 border border-gray-100 rounded-xl p-5 font-mono text-sm leading-relaxed text-gray-700 whitespace-pre-wrap max-h-[500px] overflow-y-auto">
++          {{ draftResult.current_draft }}
++        </div>
++>>>>>>> .their
+       </div>
+-    </div>
+ 
++<<<<<<< .our
+     <!-- Main Workspace: A4 Document Canvas (Left) + Side Inspector (Right) -->
+     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+       
+@@ -303,10 +431,32 @@
+               <span class="text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
+                 {{ draftResult.critic_feedback || 'Document structure and facts conform to legal archetype standards.' }}
+               </span>
++=======
++      <!-- Agent Metadata & References (1/3 width) -->
++      <div class="space-y-6">
++        <!-- Verification Statistics Card -->
++        <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
++          <h4 class="font-bold text-gray-800 text-sm">Agent Execution Summary</h4>
++          <div class="divide-y divide-gray-100 text-xs">
++            <div class="py-2.5 flex items-center justify-between">
++              <span class="text-gray-500 font-semibold">Iteration Loops</span>
++              <span class="font-bold text-gray-800">{{ draftResult.revision_count }}</span>
++            </div>
++            <div class="py-2.5 flex items-center justify-between">
++              <span class="text-gray-500 font-semibold">Status</span>
++              <span [ngClass]="{'text-emerald-600': draftResult.is_approved, 'text-amber-500': !draftResult.is_approved}" class="font-bold uppercase">
++                {{ draftResult.is_approved ? 'Verified' : 'Incomplete' }}
++              </span>
++            </div>
++            <div class="py-2.5 flex flex-col gap-1">
++              <span class="text-gray-500 font-semibold">Last Critic Remarks</span>
++              <span class="text-gray-400 italic">{{ draftResult.critic_feedback || 'No complaints - perfect structure.' }}</span>
++>>>>>>> .their
+             </div>
+           </div>
+         </div>
+ 
++<<<<<<< .our
+         <!-- Revision History Card (Human-in-the-Loop) -->
+         <div *ngIf="revisionHistory.length > 1" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
+           <h4 class="font-semibold text-slate-800 text-xs uppercase tracking-wider">Revision History</h4>
+@@ -320,6 +470,24 @@
+                 Feedback: "{{ rev.feedback }}"
+               </p>
+             </div>
++=======
++        <!-- Agent Steps Logs -->
++        <div *ngIf="draftResult.step_logs && draftResult.step_logs.length > 0" class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-3">
++          <h4 class="font-bold text-gray-800 text-sm">Agent Activity Log</h4>
++          <ul class="space-y-2 text-xs text-gray-600 max-h-[200px] overflow-y-auto">
++            <li *ngFor="let log of draftResult.step_logs" class="flex items-start gap-2">
++              <span class="text-indigo-500 mt-0.5">•</span>
++              <span>{{ log }}</span>
++            </li>
++          </ul>
++        </div>
++
++        <!-- Retrieved Precedents Card -->
++        <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
++          <h4 class="font-bold text-gray-800 text-sm">Retrieved Context Docs</h4>
++          <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-[11px] font-mono text-gray-500 leading-normal max-h-[250px] overflow-y-auto">
++            {{ draftResult.context_documents }}
++>>>>>>> .their
+           </div>
+         </div>
+ 
+@@ -343,7 +511,12 @@
+         </div>
+ 
+       </div>
++    </div>
+ 
++  </div>
++  <!-- ===== END LEFT COLUMN ===== -->
++
++<<<<<<< .our
+     </div>
+ 
+   </div>
+@@ -378,7 +551,105 @@
+             class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg font-medium border border-slate-200 transition">
+             + {{ s }}
+           </button>
++=======
++
++  <!-- ===== RIGHT COLUMN: Previous Drafts panel ===== -->
++  <div class="mt-6 lg:mt-0 lg:sticky lg:top-6">
++    <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col" style="max-height: calc(100vh - 48px);">
++
++      <!-- Panel Header -->
++      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
++        <div class="flex items-center gap-2">
++          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
++          </svg>
++          <h3 class="font-bold text-gray-800 text-sm">Previous Drafts</h3>
++          <span *ngIf="draftHistory.length > 0" class="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded-full">{{ draftHistory.length }}</span>
++        </div>
++        <!-- Refresh button -->
++        <button 
++          (click)="loadDraftHistory()" 
++          [disabled]="historyLoading"
++          title="Refresh history"
++          class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition disabled:opacity-40">
++          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" [class.animate-spin]="historyLoading" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
++          </svg>
++        </button>
++      </div>
++
++      <!-- Scrollable list -->
++      <div class="overflow-y-auto flex-1 p-3 space-y-2">
++
++        <!-- Loading skeleton -->
++        <ng-container *ngIf="historyLoading && draftHistory.length === 0">
++          <div *ngFor="let _ of [1,2,3]" class="rounded-xl border border-gray-100 p-3 space-y-2 animate-pulse">
++            <div class="h-3 bg-gray-100 rounded w-3/4"></div>
++            <div class="h-2 bg-gray-100 rounded w-full"></div>
++            <div class="h-2 bg-gray-100 rounded w-5/6"></div>
++            <div class="h-2 bg-gray-100 rounded w-1/3"></div>
++          </div>
++        </ng-container>
++
++        <!-- Error state -->
++        <div *ngIf="historyError" class="flex flex-col items-center justify-center py-10 text-center gap-2">
++          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
++          </svg>
++          <p class="text-xs text-gray-400 font-medium">Failed to load history</p>
++          <button (click)="loadDraftHistory()" class="text-xs text-indigo-500 hover:underline font-semibold">Try again</button>
++>>>>>>> .their
++        </div>
++
++        <!-- Empty state -->
++        <div *ngIf="!historyLoading && !historyError && draftHistory.length === 0" class="flex flex-col items-center justify-center py-12 text-center gap-3">
++          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
++          </svg>
++          <p class="text-xs text-gray-400 font-medium">No drafts yet</p>
++          <p class="text-[11px] text-gray-300">Generate your first draft to see history here.</p>
+         </div>
++
++        <!-- Draft history cards -->
++        <ng-container *ngIf="!historyError">
++          <div *ngFor="let item of draftHistory" class="rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-sm transition-all overflow-hidden">
++            
++            <!-- Card header (always visible) -->
++            <button (click)="toggleExpandDraft(item.id)" class="w-full text-left p-3 space-y-1.5">
++              <div class="flex items-start justify-between gap-2">
++                <span class="text-xs font-bold text-gray-800 leading-tight line-clamp-1">{{ item.case_title }}</span>
++                <!-- Approval badge -->
++                <span *ngIf="item.is_approved" class="flex-shrink-0 text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-100 px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">Verified</span>
++                <span *ngIf="!item.is_approved" class="flex-shrink-0 text-[10px] bg-amber-50 text-amber-600 border border-amber-100 px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">Needs Review</span>
++              </div>
++
++              <!-- Prompt (2-line clamp) -->
++              <p class="text-[11px] text-gray-500 leading-relaxed line-clamp-2">{{ item.prompt }}</p>
++
++              <!-- Timestamp & expand indicator -->
++              <div class="flex items-center justify-between">
++                <span class="text-[10px] text-gray-300 font-medium">{{ item.created_at | date:'d MMM y, h:mm a' }}</span>
++                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-300 transition-transform" [class.rotate-180]="expandedDraftId === item.id" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
++                </svg>
++              </div>
++            </button>
++
++            <!-- Expanded: full draft text + Reuse button -->
++            <div *ngIf="expandedDraftId === item.id" class="border-t border-gray-100">
++              <div class="bg-gray-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-gray-600 max-h-48 overflow-y-auto whitespace-pre-wrap">{{ item.draft_text }}</div>
++              <div class="px-3 py-2 border-t border-gray-100">
++                <button 
++                  (click)="reusePrompt(item)"
++                  class="w-full text-center text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 py-1.5 rounded-lg transition">
++                  ↑ Reuse Prompt
++                </button>
++              </div>
++            </div>
++
++          </div>
++        </ng-container>
++
+       </div>
+ 
+       <!-- Feedback Input -->
+@@ -407,5 +678,9 @@
+       </div>
+     </div>
+   </div>
++<<<<<<< .our
++=======
++  <!-- ===== END RIGHT COLUMN ===== -->
++>>>>>>> .their
+ 
+ </div>
+changed in both
+  base   100644 de97b2cfee286aa02bc4afb476a2fd50396c7f50 frontend/src/app/components/drafting-studio/drafting-studio.ts
+  our    100644 6c8797691212df274a05e437dc308a505a2b9a32 frontend/src/app/components/drafting-studio/drafting-studio.ts
+  their  100644 5f34da8c2d28e3a215df0055fe3df8bd3e33b3cb frontend/src/app/components/drafting-studio/drafting-studio.ts
+@@ -1,4 +1,4 @@
+-import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
++import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+ import { CommonModule } from '@angular/common';
+ import { FormsModule } from '@angular/forms';
+ import { LegalService } from '../../services/legal.service';
+@@ -21,6 +21,7 @@
+ export class DraftingStudio implements OnInit {
+   cases: any[] = [];
+   selectedCaseId: number | null = null;
++<<<<<<< .our
+   
+   // Document Archetypes (Clean taxonomy without emojis)
+   docTypes = [
+@@ -33,6 +34,8 @@
+     { id: 'contract', label: 'Commercial Agreement / Contract', desc: 'Parties, recitals, covenants, termination, execution' }
+   ];
+   selectedDocType = 'auto';
++=======
++>>>>>>> .their
+ 
+   // AI Drafting states
+   draftPrompt = '';
+@@ -57,6 +60,12 @@
+     'Include clear counsel verification and identification details'
+   ];
+ 
++  // Draft History states
++  draftHistory: any[] = [];
++  historyLoading = false;
++  historyError = false;
++  expandedDraftId: number | null = null;
++
+   constructor(
+     private legalService: LegalService,
+     private cdr: ChangeDetectorRef
+@@ -64,6 +73,7 @@
+ 
+   ngOnInit(): void {
+     this.loadCases();
++    this.loadDraftHistory();
+   }
+ 
+   loadCases(): void {
+@@ -79,6 +89,24 @@
+     });
+   }
+ 
++  loadDraftHistory(): void {
++    this.historyLoading = true;
++    this.historyError = false;
++    this.legalService.getDraftHistory().subscribe({
++      next: (data) => {
++        this.draftHistory = data;
++        this.historyLoading = false;
++        this.cdr.detectChanges();
++      },
++      error: (err) => {
++        console.error('Error fetching draft history:', err);
++        this.historyLoading = false;
++        this.historyError = true;
++        this.cdr.detectChanges();
++      }
++    });
++  }
++
+   generateLegalDraft(): void {
+     if (!this.draftPrompt.trim() || !this.selectedCaseId) return;
+     this.drafting = true;
+@@ -90,6 +118,7 @@
+       next: (res) => {
+         this.draftResult = res;
+         this.drafting = false;
++<<<<<<< .our
+         this.draftStatus = 'review_pending';
+         this.revisionHistory = [
+           {
+@@ -103,12 +132,21 @@
+       error: (err) => {
+         this.drafting = false;
+         this.draftStatus = 'idle';
++=======
++        this.cdr.detectChanges();
++        // Refresh history so the new record appears immediately
++        this.loadDraftHistory();
++      },
++      error: (err) => {
++        this.drafting = false;
++>>>>>>> .their
+         this.cdr.detectChanges();
+         alert('Drafting failed: ' + (err.error?.error || JSON.stringify(err.error)));
+       }
+     });
+   }
+ 
++<<<<<<< .our
+   acceptDraft(): void {
+     this.draftStatus = 'accepted';
+     this.cdr.detectChanges();
+@@ -336,5 +374,19 @@
+   getDocTypeBadge(typeId?: string): string {
+     const found = this.docTypes.find(d => d.id === (typeId || this.draftResult?.doc_type || this.selectedDocType));
+     return found ? found.label : 'Legal Instrument';
++=======
++  toggleExpandDraft(id: number): void {
++    this.expandedDraftId = this.expandedDraftId === id ? null : id;
++  }
++
++  reusePrompt(item: any): void {
++    this.draftPrompt = item.prompt;
++    if (item.case_file) {
++      this.selectedCaseId = item.case_file;
++    }
++    // Scroll to top so user sees the pre-filled form
++    window.scrollTo({ top: 0, behavior: 'smooth' });
++    this.cdr.detectChanges();
++>>>>>>> .their
+   }
+ }
+changed in both
+  base   100644 920fb039cba25bfcf2e54e4a67a6f5be3d0b3e8b frontend/src/app/services/legal.service.ts
+  our    100644 fd472af72141789d4b28da8b9435d4479f87cabe frontend/src/app/services/legal.service.ts
+  their  100644 23b9eceb06ae31f8ba4189d73614c5b92061dd43 frontend/src/app/services/legal.service.ts
+@@ -108,5 +108,10 @@
+       { headers, responseType: 'blob' }
+     );
+   }
++
++  // Draft History (read-only)
++  getDraftHistory(): Observable<any[]> {
++    return this.http.get<any[]>(`${this.apiUrl}/draft-history/`, this.getHeaders());
++  }
+ }
+ 

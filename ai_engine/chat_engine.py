@@ -35,11 +35,12 @@ def get_chroma_collection():
     """
     Returns the persistent ChromaDB collection.
     """
-    db_path = os.path.join(os.path.dirname(__file__), "chroma_db")
+    db_path = os.getenv("CHROMA_PATH", os.path.join(os.path.dirname(__file__), "chroma_db"))
+    collection_name = os.getenv("COLLECTION_NAME", "legal_knowledge_vault")
     client = chromadb.PersistentClient(path=db_path)
     embedding_func = embedding_functions.DefaultEmbeddingFunction()
     return client.get_or_create_collection(
-        name="legal_knowledge_vault",
+        name=collection_name,
         embedding_function=embedding_func
     )
 

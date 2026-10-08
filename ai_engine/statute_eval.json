@@ -1,0 +1,212 @@
+[
+  {
+    "query": "punishment for murder under BNS",
+    "category": "new_criminal_code",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "103"]]
+  },
+  {
+    "query": "cheating and dishonestly inducing delivery of property in new penal code",
+    "category": "new_criminal_code",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "318"]]
+  },
+  {
+    "query": "punishment for theft under Bharatiya Nyaya Sanhita",
+    "category": "new_criminal_code",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "303"]]
+  },
+  {
+    "query": "dowry death under BNS 2023",
+    "category": "new_criminal_code",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "80"]]
+  },
+  {
+    "query": "punishment for rape in Bharatiya Nyaya Sanhita",
+    "category": "new_criminal_code",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "64"]]
+  },
+  {
+    "query": "organized crime penalty BNS",
+    "category": "new_criminal_code",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "111"]]
+  },
+  {
+    "query": "punishment for murder under IPC 1860",
+    "category": "old_criminal_code",
+    "expected": [["Indian Penal Code, 1860", "302"]]
+  },
+  {
+    "query": "cheating under section 420 Indian Penal Code",
+    "category": "old_criminal_code",
+    "expected": [["Indian Penal Code, 1860", "420"]]
+  },
+  {
+    "query": "dowry death under section 304B IPC",
+    "category": "old_criminal_code",
+    "expected": [["Indian Penal Code, 1860", "304B"]]
+  },
+  {
+    "query": "punishment for rape under IPC section 376",
+    "category": "old_criminal_code",
+    "expected": [["Indian Penal Code, 1860", "376"]]
+  },
+  {
+    "query": "causing death by negligence under IPC 304A",
+    "category": "old_criminal_code",
+    "expected": [["Indian Penal Code, 1860", "304A"]]
+  },
+  {
+    "query": "cruelty by husband or relatives section 498A IPC",
+    "category": "old_criminal_code",
+    "expected": [["Indian Penal Code, 1860", "498A"]]
+  },
+  {
+    "query": "anticipatory bail",
+    "category": "bail_and_criminal_procedure",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "482"], ["Code of Criminal Procedure, 1973", "438"]]
+  },
+  {
+    "query": "bail for non-bailable offence",
+    "category": "bail_and_criminal_procedure",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "480"], ["Code of Criminal Procedure, 1973", "437"]]
+  },
+  {
+    "query": "special powers of High Court or Court of Session regarding bail",
+    "category": "bail_and_criminal_procedure",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "483"], ["Code of Criminal Procedure, 1973", "439"]]
+  },
+  {
+    "query": "maintenance for wife and children",
+    "category": "bail_and_criminal_procedure",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "144"], ["Code of Criminal Procedure, 1973", "125"]]
+  },
+  {
+    "query": "bail by High Court",
+    "category": "bail_and_criminal_procedure",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "483"], ["Code of Criminal Procedure, 1973", "439"]]
+  },
+  {
+    "query": "police officer diary of proceedings in investigation",
+    "category": "bail_and_criminal_procedure",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "193"], ["Code of Criminal Procedure, 1973", "172"]]
+  },
+  {
+    "query": "electronic evidence admissibility",
+    "category": "evidence_electronic_records",
+    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "63"], ["Indian Evidence Act, 1872", "65B"]]
+  },
+  {
+    "query": "admissibility of electronic records in court",
+    "category": "evidence_electronic_records",
+    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "63"], ["Indian Evidence Act, 1872", "65B"]]
+  },
+  {
+    "query": "primary evidence definition",
+    "category": "evidence_electronic_records",
+    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "57"], ["Indian Evidence Act, 1872", "62"]]
+  },
+  {
+    "query": "secondary evidence definition and rules",
+    "category": "evidence_electronic_records",
+    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "58"], ["Indian Evidence Act, 1872", "63"]]
+  },
+  {
+    "query": "burden of proof in criminal trials",
+    "category": "evidence_electronic_records",
+    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "104"], ["Indian Evidence Act, 1872", "101"]]
+  },
+  {
+    "query": "accomplice evidence and testimony",
+    "category": "evidence_electronic_records",
+    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "138"], ["Indian Evidence Act, 1872", "133"]]
+  },
+  {
+    "query": "dishonoured cheque",
+    "category": "retained_hf_acts",
+    "expected": [["Negotiable Instruments Act, 1881", "138"]]
+  },
+  {
+    "query": "dishonour of cheque for insufficiency of funds",
+    "category": "retained_hf_acts",
+    "expected": [["Negotiable Instruments Act, 1881", "138"]]
+  },
+  {
+    "query": "damages for breach of contract",
+    "category": "retained_hf_acts",
+    "expected": [["Indian Contract Act, 1872", "73"]]
+  },
+  {
+    "query": "rejection of plaint for lack of cause of action Order VII Rule 11",
+    "category": "retained_hf_acts",
+    "expected": [["Code of Civil Procedure, 1908", "Order 7 Rule 11"]]
+  },
+  {
+    "query": "limitation period for filing suit",
+    "category": "retained_hf_acts",
+    "expected": [["Limitation Act, 1963", "3"]]
+  },
+  {
+    "query": "remedies for breach of trust under contract",
+    "category": "retained_hf_acts",
+    "expected": [["Indian Contract Act, 1872", "73"]]
+  },
+  {
+    "query": "cyber terrorism penalty under IT Act section 66F",
+    "category": "legal_topics_not_covered",
+    "expected": []
+  },
+  {
+    "query": "compensation for failure to protect sensitive personal data under IT Act 43A",
+    "category": "legal_topics_not_covered",
+    "expected": []
+  },
+  {
+    "query": "specific performance as mandatory general rule under 2018 amendment",
+    "category": "legal_topics_not_covered",
+    "expected": []
+  },
+  {
+    "query": "identity theft punishment under Information Technology Act 66C",
+    "category": "legal_topics_not_covered",
+    "expected": []
+  },
+  {
+    "query": "publishing sexually explicit content online section 67A IT Act",
+    "category": "legal_topics_not_covered",
+    "expected": []
+  },
+  {
+    "query": "interim compensation for dishonoured cheque section 143A NI Act",
+    "category": "legal_topics_not_covered",
+    "expected": []
+  },
+  {
+    "query": "how to bake a chocolate cake",
+    "category": "unrelated",
+    "expected": []
+  },
+  {
+    "query": "best places to visit in Tokyo",
+    "category": "unrelated",
+    "expected": []
+  },
+  {
+    "query": "quantum computing principles",
+    "category": "unrelated",
+    "expected": []
+  },
+  {
+    "query": "weather forecast for Delhi",
+    "category": "unrelated",
+    "expected": []
+  },
+  {
+    "query": "football match score prediction",
+    "category": "unrelated",
+    "expected": []
+  },
+  {
+    "query": "how to configure nginx web server",
+    "category": "unrelated",
+    "expected": []
+  }
+]

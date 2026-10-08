@@ -55,6 +55,29 @@ class LegalDocument(models.Model):
     def __str__(self):
         return self.name
 
+class DraftHistory(models.Model):
+    lawyer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='draft_histories'
+    )
+    case_file = models.ForeignKey(
+        CaseFile,
+        on_delete=models.CASCADE,
+        related_name='drafts'
+    )
+    prompt = models.TextField()
+    draft_text = models.TextField()
+    is_approved = models.BooleanField(default=False)
+    revision_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Draft by {self.lawyer} for {self.case_file.title} on {self.created_at:%Y-%m-%d}"
+
 # Signals to trigger Celery tasks
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver

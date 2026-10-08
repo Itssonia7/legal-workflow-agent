@@ -1,16 +1,19 @@
 import os
 import hashlib
+import logging
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 
-from .models import CaseFile, LegalDocument
+from .models import CaseFile, LegalDocument, DraftHistory
 from .serializers import LegalDocumentSerializer
 
 # Import AI Engine components
 from ai_engine.ingest import process_legal_document
 from ai_engine.graph import app as ai_app
+
+logger = logging.getLogger(__name__)
 
 class DocumentUploadAndIngestView(views.APIView):
     """
@@ -107,6 +110,7 @@ class AIDraftGeneratorView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Verify the case belongs to request.user before touching the AI engine
         case_file = get_object_or_404(CaseFile, id=case_id, lawyer=request.user) if case_id else None
 
         print(f"[Backend] Starting LangGraph multi-agent system with prompt: {user_prompt} for Case ID: {case_id}")
@@ -125,7 +129,27 @@ class AIDraftGeneratorView(views.APIView):
         try:
             # Execute the LangGraph loop (limit depth to 20 steps to allow enough drafting cycles)
             result = ai_app.invoke(initial_state, config={"recursion_limit": 20})
-            
+
+            # --- Persist draft history (additive; failure must not break the response) ---
+            draft_history_id = None
+            if case_file:
+                try:
+                    history_obj = DraftHistory.objects.create(
+                        lawyer=request.user,
+                        case_file=case_file,
+                        prompt=user_prompt,
+                        draft_text=result.get("current_draft", ""),
+                        is_approved=result.get("is_approved", False),
+                        revision_count=result.get("revision_count", 0),
+                    )
+                    draft_history_id = history_obj.id
+                except Exception as save_err:
+                    logger.error(
+                        "[DraftHistory] Failed to save draft history for user=%s case=%s: %s",
+                        request.user.id, case_id, save_err
+                    )
+            # -------------------------------------------------------------------------
+
             return Response({
                 "user_prompt": result.get("user_prompt"),
                 "context_documents": result.get("context_documents"),
@@ -133,13 +157,15 @@ class AIDraftGeneratorView(views.APIView):
                 "is_approved": result.get("is_approved"),
                 "revision_count": result.get("revision_count"),
                 "critic_feedback": result.get("critic_feedback"),
-                "step_logs": result.get("step_logs", [])
+                "step_logs": result.get("step_logs", []),
+                "draft_history_id": draft_history_id,
             }, status=status.HTTP_200_OK)
-            
+
         except Exception as e:
             return Response(
                 {"error": f"LangGraph execution failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 

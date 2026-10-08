@@ -74,4 +74,9 @@ export class LegalService {
       this.getHeaders()
     );
   }
+
+  // Draft History (read-only)
+  getDraftHistory(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/draft-history/`, this.getHeaders());
+  }
 }

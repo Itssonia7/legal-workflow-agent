@@ -4,7 +4,8 @@ from .views import (
     ClientViewSet,
     CaseFileViewSet,
     HearingScheduleViewSet,
-    LegalDocumentViewSet
+    LegalDocumentViewSet,
+    DraftHistoryViewSet
 )
 
 router = DefaultRouter()
@@ -12,6 +13,7 @@ router.register(r'clients', ClientViewSet, basename='client')
 router.register(r'cases', CaseFileViewSet, basename='case')
 router.register(r'schedules', HearingScheduleViewSet, basename='schedule')
 router.register(r'documents', LegalDocumentViewSet, basename='document')
+router.register(r'draft-history', DraftHistoryViewSet, basename='draft-history')
 
 from .views_ai import DocumentUploadAndIngestView, AIDraftGeneratorView
 

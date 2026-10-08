@@ -1,10 +1,11 @@
 from rest_framework import viewsets, permissions
-from .models import Client, CaseFile, HearingSchedule, LegalDocument
+from .models import Client, CaseFile, HearingSchedule, LegalDocument, DraftHistory
 from .serializers import (
     ClientSerializer,
     CaseFileSerializer,
     HearingScheduleSerializer,
-    LegalDocumentSerializer
+    LegalDocumentSerializer,
+    DraftHistorySerializer
 )
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -48,3 +49,13 @@ class LegalDocumentViewSet(viewsets.ModelViewSet):
         if self.request.user.role == 'admin':
             return LegalDocument.objects.all()
         return LegalDocument.objects.filter(case_file__lawyer=self.request.user).order_by('-uploaded_at')
+
+class DraftHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = DraftHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.role == 'admin':
+            return DraftHistory.objects.all().order_by('-created_at')
+        return DraftHistory.objects.filter(lawyer=self.request.user).order_by('-created_at')
+

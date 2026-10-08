@@ -45,7 +45,7 @@ ACT_CONFIGS = {
         "partial_coverage": False,
         "covered_range": "1-511",
         "sec_1_pattern": r'(?:\n|^)\s*1\.\s+Title\s+and\s+extent\s+of\s+operation',
-        "known_repealed_ranges": [set(range(161, 166))], # 161, 162, 163, 164, 165
+        "known_repealed_ranges": [set(range(161, 166))],  # 161, 162, 163, 164, 165
         "text_as_of": "1997-12-31",
         "source_dataset": "official_pdf"
     },
@@ -59,6 +59,97 @@ ACT_CONFIGS = {
         "known_repealed_ranges": [],
         "text_as_of": "1872-03-15",
         "source_dataset": "official_pdf"
+    }
+}
+
+RETAINED_HF_ACTS = {
+    "Code of Criminal Procedure Act, 1973": {
+        "act_name": "Code of Criminal Procedure, 1973",
+        "legal_era": "pre-2024-criminal-codes",
+        "partial_coverage": False,
+        "unverified_currency": True,
+        "text_as_of": "1973-01-25",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Negotiable Instruments Act, 1881": {
+        "act_name": "Negotiable Instruments Act, 1881",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": True,
+        "text_as_of": "1881-12-09",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Indian Contract Act, 1872": {
+        "act_name": "Indian Contract Act, 1872",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1872-04-25",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Code of Civil Procedure, 1908": {
+        "act_name": "Code of Civil Procedure, 1908",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1908-03-21",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Consumer Protection Act, 2019": {
+        "act_name": "Consumer Protection Act, 2019",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "2019-08-09",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Limitation Act, 1963": {
+        "act_name": "Limitation Act, 1963",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1963-10-05",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Hindu Marriage Act, 1955": {
+        "act_name": "Hindu Marriage Act, 1955",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1955-05-18",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Transfer of Property Act, 1882": {
+        "act_name": "Transfer of Property Act, 1882",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1882-02-17",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Registration Act, 1908": {
+        "act_name": "Registration Act, 1908",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1908-12-18",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Advocates Act, 1961": {
+        "act_name": "Advocates Act, 1961",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1961-05-19",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
+    },
+    "Constitution of India, 1949": {
+        "act_name": "Constitution of India, 1949",
+        "legal_era": "retained-central-act",
+        "partial_coverage": True,
+        "unverified_currency": False,
+        "text_as_of": "1949-11-26",
+        "source_dataset": "hf_mratanusarkar_indian_laws"
     }
 }
 
@@ -118,34 +209,79 @@ def audit_and_clean_lines(text: str, pdf_filename: str):
     cleaned = re.sub(r'\n+', '\n', cleaned)
     return cleaned.strip(), removed_lines
 
-def check_word_loss(pdf_filename: str, raw_text: str, cleaned_text: str, removed_lines: list):
+def extract_titles_from_pdf(pdf_path: str, filename: str) -> dict:
     """
-    Verifies word-loss consistency by asserting that all word differences match removed lines.
+    Extracts section titles for BNS/BNSS/BSA from marginal notes (x0 coordinate analysis)
+    or for IPC/Evidence Act from inline heading text.
     """
-    raw_words = re.findall(r'\b\w+\b', raw_text)
-    cleaned_words = re.findall(r'\b\w+\b', cleaned_text)
-    removed_words = re.findall(r'\b\w+\b', '\n'.join(removed_lines))
+    if not os.path.exists(pdf_path):
+        return {}
     
-    # In BNS/BNSS/BSA, words in raw minus removed equals cleaned
-    return len(raw_words), len(cleaned_words), len(removed_words)
+    doc = fitz.open(pdf_path)
+    titles = {}
+    
+    if filename in ["BNS_2023.pdf", "BNSS_2023.pdf", "BSA_2023.pdf"]:
+        sec_pattern = re.compile(r'^\s*(\d+[A-Z]*)\.\s+')
+        for pno in range(len(doc)):
+            page = doc[pno]
+            blocks = page.get_text('blocks')
+            margin_blocks = []
+            main_sec_blocks = []
+            
+            for b in blocks:
+                x0, y0, x1, y1, text, bno, btype = b
+                clean_t = text.strip()
+                if not clean_t: continue
+                
+                if x0 < 110 or x0 > 480:
+                    if not re.match(r'^\d+$', clean_t) and 'GAZETTE OF INDIA' not in clean_t:
+                        margin_blocks.append((y0, clean_t))
+                else:
+                    m = sec_pattern.match(clean_t)
+                    if m:
+                        sec_label = m.group(1)
+                        main_sec_blocks.append((y0, sec_label))
+                        
+            for sec_y0, sec_label in main_sec_blocks:
+                if sec_label not in titles:
+                    best_title = None
+                    min_diff = 35.0
+                    for my0, mtext in margin_blocks:
+                        diff = abs(my0 - sec_y0)
+                        if diff < min_diff:
+                            min_diff = diff
+                            best_title = norm_space(mtext)
+                    if best_title:
+                        if best_title.endswith('.'): best_title = best_title[:-1]
+                        titles[sec_label] = best_title
+    else:
+        full_text = '\n'.join([p.get_text('text') for p in doc])
+        pattern = re.compile(r'\n\s*(\d+[A-Z]*)\.\s+([^.\n\-]+(?:\.[^.\n\-]+)?)(?:\.\-\-|\-\-|\.\s*\n|\s*\n)')
+        for m in pattern.finditer(full_text):
+            sec = m.group(1).strip()
+            title = m.group(2).strip()
+            title = re.sub(r'^\d+\*?\[', '', title)
+            title = norm_space(title)
+            if sec not in titles and len(title) > 2 and len(title) < 150:
+                titles[sec] = title
+                
+    return titles
 
 def parse_pdf(pdf_path: str, config: dict):
     filename = os.path.basename(pdf_path)
     if not os.path.exists(pdf_path):
-        return None, "File missing", [], [], []
+        return None, "File missing", [], [], [], {}
     
     doc = fitz.open(pdf_path)
     full_text = "\n".join([page.get_text("text") for page in doc])
     
-    # Check if document is a Bill
     first_page_text = doc[0].get_text("text") if len(doc) > 0 else ""
     if re.search(r'\bBILL\b', first_page_text[:400], re.IGNORECASE) and not re.search(r'ACT NO\.\s+\d+', first_page_text[:400], re.IGNORECASE):
-        return None, "Document is a Bill", [], [], []
+        return None, "Document is a Bill", [], [], [], {}
 
-    # Isolate main body
     sec_1_matches = list(re.finditer(config["sec_1_pattern"], full_text, re.IGNORECASE))
     if not sec_1_matches:
-        return None, "Section 1 heading pattern not found", [], [], []
+        return None, "Section 1 heading pattern not found", [], [], [], {}
     
     start_pos = sec_1_matches[-1].start()
     obj_match = re.search(r'\n\s*STATEMENT OF OBJECTS AND REASONS', full_text, re.IGNORECASE)
@@ -153,7 +289,6 @@ def parse_pdf(pdf_path: str, config: dict):
     
     body_text = "\n" + full_text[start_pos:end_pos]
     
-    # Clean footnote lines and amendment brackets BEFORE splitting to capture all lettered sections cleanly
     lines = body_text.split('\n')
     clean_lines = []
     all_removed_lines = []
@@ -174,7 +309,8 @@ def parse_pdf(pdf_path: str, config: dict):
     if filename in ["IPC_1860.pdf", "Evidence_Act_1872.pdf"]:
         body_text_cleaned_lines = remove_amendment_brackets(body_text_cleaned_lines)
 
-    # Split by Section headers (e.g. \n 1. or \n 192. or \n 366A.)
+    title_map = extract_titles_from_pdf(pdf_path, filename)
+
     pattern = r'\n\s*(\d+[A-Z]*)\.\s*'
     raw_chunks = re.split(pattern, body_text_cleaned_lines)
     
@@ -202,19 +338,21 @@ def parse_pdf(pdf_path: str, config: dict):
         suffix = m.group(2)
         
         cleaned_content, _ = audit_and_clean_lines(raw_content, filename)
+        sec_title = title_map.get(label, f"Section {label}")
         
-        # Sequence Validation Logic
         if num == last_num:
             duplicates.append((label, cleaned_content[:60]))
             if label not in sections or len(cleaned_content) > len(sections[label]["content"]):
                 sections[label] = {
                     "raw": raw_content,
-                    "content": cleaned_content
+                    "content": cleaned_content,
+                    "title": sec_title
                 }
         elif num == last_num + 1:
             sections[label] = {
                 "raw": raw_content,
-                "content": cleaned_content
+                "content": cleaned_content,
+                "title": sec_title
             }
             last_num = num
         elif num > last_num + 1:
@@ -222,7 +360,8 @@ def parse_pdf(pdf_path: str, config: dict):
             if gap.issubset(known_repealed_set) or re.search(r'\[Rep\.\s+by|\[Omitted\b|\[Repealed\b', raw_content[:200], re.IGNORECASE):
                 sections[label] = {
                     "raw": raw_content,
-                    "content": cleaned_content
+                    "content": cleaned_content,
+                    "title": sec_title
                 }
                 last_num = num
             else:
@@ -230,11 +369,37 @@ def parse_pdf(pdf_path: str, config: dict):
         else:
             rejected.append((label, raw_content[:60]))
             
-    return sections, None, duplicates, rejected, all_removed_lines
+    return sections, None, duplicates, rejected, all_removed_lines, title_map
+
+def split_section_into_subsections(act_name: str, sec_num: str, title: str, content: str, word_limit: int = 200):
+    """
+    Splits long section (> 200 words) into sub-sections (1), (2), etc.
+    Returns list of tuples: (chunk_id, chunk_text)
+    """
+    words = content.split()
+    if len(words) <= word_limit:
+        chunk_id = f"{act_name}_sec_{sec_num}"
+        chunk_text = f"Act: {act_name}, Section {sec_num}: {title}.\n{content}"
+        return [(chunk_id, chunk_text)]
+        
+    parts = re.split(r'\n(?=\(\d+\)\s+)', content)
+    if len(parts) <= 1:
+        chunk_id = f"{act_name}_sec_{sec_num}"
+        chunk_text = f"Act: {act_name}, Section {sec_num}: {title}.\n{content}"
+        return [(chunk_id, chunk_text)]
+        
+    chunks = []
+    for k, p in enumerate(parts, 1):
+        p_clean = p.strip()
+        if not p_clean: continue
+        chunk_id = f"{act_name}_sec_{sec_num}_part_{k}"
+        chunk_text = f"Act: {act_name}, Section {sec_num}: {title} (Part {k}).\n{p_clean}"
+        chunks.append((chunk_id, chunk_text))
+    return chunks
 
 def run_dry_run(pdf_dir: str, strict: bool = False):
     print("=========================================================")
-    print(" STATUTE PDF INGESTION -- FAIL-CLOSED DRY RUN REPORT")
+    print(" STATUTE INGESTION -- FAIL-CLOSED DRY RUN REPORT")
     print("=========================================================\n")
     
     golden_phrases = {
@@ -278,7 +443,7 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
             continue
             
         res = parse_pdf(pdf_path, config)
-        sections, err_msg, duplicates, rejected, removed_lines = res
+        sections, err_msg, duplicates, rejected, removed_lines, title_map = res
         
         if sections is None:
             print(f"[SKIPPED] {pdf_name}: {err_msg}")
@@ -287,19 +452,31 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
             continue
             
         base_nums = [int(re.sub(r'\D', '', k)) for k in sections.keys() if re.sub(r'\D', '', k)]
-        max_extracted = max(base_nums) if base_nums else 0
         official_max = config["official_sections_count"]
         
+        # Count sub-section splits
+        total_chunks = 0
+        split_sections_count = 0
+        for sec_num, sec_data in sections.items():
+            ch = split_section_into_subsections(config["act_name"], sec_num, sec_data["title"], sec_data["content"])
+            total_chunks += len(ch)
+            if len(ch) > 1:
+                split_sections_count += 1
+
         print(f"Extracted Sections Count: {len(sections)}")
         print(f"Official Sections Count:  {official_max}")
+        print(f"Total Vector Chunks:      {total_chunks} (Long sections split: {split_sections_count})")
+        print(f"Extracted Titles Count:   {len(title_map)}")
         print(f"Duplicates Logged:        {len(duplicates)}")
         print(f"Rejected Candidates:      {len(rejected)}")
         print(f"Removed Header/Footer Lines Count: {len(removed_lines)}")
-        if removed_lines:
-            print("  Sample Removed Lines:")
-            for rem_line in removed_lines[:5]:
-                print(f"   - {repr(rem_line)}")
         
+        print("\n  Sample 10 (Section, Title) Pairs:")
+        sample_keys = list(sections.keys())[:10]
+        for sk in sample_keys:
+            stitle = sections[sk]["title"]
+            print(f"   - Section {sk}: {repr(stitle)}")
+            
         # Check missing base section numbers
         known_repealed_set = set()
         for r in config.get("known_repealed_ranges", []):
@@ -312,7 +489,7 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
         else:
             print(f"Base Section Coverage (1..{official_max}): COMPLETE (or recognized repealed)")
             
-        # Golden Checks (Exact Whitespace Normalised Phrase Matching)
+        # Golden Checks
         for tgt_sec, phrase in golden_phrases.get(pdf_name, []):
             sec_obj = sections.get(tgt_sec)
             if not sec_obj:
@@ -369,20 +546,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
                 elif ak == "376E":
                     print("    Explanation: Absent from PDF text (introduced by 2013 Amendment, postdating this ~1997 edition).")
                     
-            print("\n[IPC FULL CLEANED TEXT DEMONSTRATION (304A, 304B, 305)]:")
-            for demo_sec in ["304A", "304B", "305"]:
-                print(f" === IPC Section {demo_sec} CLEANED ===")
-                print(sections.get(demo_sec, {}).get("content", "NOT FOUND"))
-                print("-" * 40)
-
-        # BNSS Section Boundaries Demonstration
-        if pdf_name == "BNSS_2023.pdf":
-            print("\n[BNSS FULL CLEANED TEXT DEMONSTRATION (481, 482, 483)]:")
-            for demo_sec in ["481", "482", "483"]:
-                print(f" === BNSS Section {demo_sec} CLEANED ===")
-                print(sections.get(demo_sec, {}).get("content", "NOT FOUND"))
-                print("-" * 40)
-
         print("\n" + "="*50 + "\n")
 
     # Item 5: HF Ingest Lists Report
@@ -390,14 +553,18 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
     print("EXCLUDED ACTS:")
     print(" - Information Technology Act, 2000 (Excluded: pre-2008 text; missing Sections 43A, 66C, 66D, 66E, 66F, 67A).")
     print(" - Specific Relief Act, 1963 (Excluded: pre-2018 text; section 10 states pre-2018 discretionary rule).")
-    print("INCLUDED WITH FLAGS:")
-    print(" - Negotiable Instruments Act, 1881: partial_coverage=True (range 1-142), unverified_currency=True (missing 143A, 148).")
-    print(" - Code of Criminal Procedure, 1973: unverified_currency=True, legal_era='pre-2024-criminal-codes'.")
+    print("INCLUDED RETAINED ACTS (11):")
+    for hf_key, hf_meta in RETAINED_HF_ACTS.items():
+        flags = []
+        if hf_meta["partial_coverage"]: flags.append("PARTIAL_COVERAGE")
+        if hf_meta["unverified_currency"]: flags.append("UNVERIFIED_CURRENCY")
+        flag_str = f" [{', '.join(flags)}]" if flags else ""
+        print(f" - {hf_meta['act_name']}{flag_str}")
     print("\n" + "="*50 + "\n")
 
     # Item 7: File identity
     print("--- 7. FILE IDENTITY INSPECTION ---")
-    for fname in ["BSA_2023.pdf", "Evidence_Act_1872.pdf"]:
+    for fname in ["BSA_2023.pdf", "Evidence_Act_1872.pdf", "IPC_1860.pdf", "BNS_2023.pdf", "BNSS_2023.pdf"]:
         fpath = os.path.join(pdf_dir, fname)
         print(f"File: {fname}")
         if not os.path.exists(fpath):
@@ -407,7 +574,8 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
             d = fitz.open(fpath)
             p1 = d[0].get_text("text")[:200] if len(d) > 0 else ""
             is_bill = "BILL" in p1.upper() and "ACT NO." not in p1.upper()
-            print(f" Classification: {'Bill' if is_bill else 'Act'}")
+            print(f" Classification: {'Bill' if is_bill else 'Enacted Act'}")
+            print(f" Pages Count: {len(d)}")
             print(f" First 200 Chars Page 1: {repr(p1)}")
         print("-" * 30)
 
@@ -420,7 +588,23 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
         print(" DRY RUN RESULT: PASS")
         print("=========================================================")
 
-def run_ingest(pdf_dir: str, target: str, confirm: bool):
+def reset_statutes_in_collection(coll):
+    """
+    Deletes ONLY documents with source_type == 'statute'.
+    """
+    try:
+        results = coll.get(where={"source_type": "statute"})
+        if results and results.get("ids"):
+            ids_to_del = results["ids"]
+            print(f"Deleting {len(ids_to_del)} existing statute records from vector store...")
+            coll.delete(ids=ids_to_del)
+            print("Statute records reset successfully.")
+        else:
+            print("No existing statute records found to reset.")
+    except Exception as e:
+        print(f"Note on reset statutes: {e}")
+
+def run_ingest(pdf_dir: str, target: str, confirm: bool, reset_statutes: bool = False):
     if target == "prod" and not confirm:
         print("[ERROR] Production ingest refused! Must specify --target prod --confirm to write to production ai_engine/chroma_db.")
         sys.exit(1)
@@ -435,73 +619,98 @@ def run_ingest(pdf_dir: str, target: str, confirm: bool):
     emb_func = embedding_functions.DefaultEmbeddingFunction()
     coll = client.get_or_create_collection(name="legal_knowledge_vault", embedding_function=emb_func)
     
-    print(f"Collection Metadata: {coll.metadata}")
-    print(f"Distance Metric Configured: {(coll.metadata or {}).get('hnsw:space', 'l2 (default)')}\n")
-    
+    if reset_statutes:
+        reset_statutes_in_collection(coll)
+        
     ingested_counts = {}
     
+    # 1. Ingest PDF Statutes
     for pdf_name, config in ACT_CONFIGS.items():
         pdf_path = os.path.join(pdf_dir, pdf_name)
         if not os.path.exists(pdf_path): continue
-        sections, _, _, _, _ = parse_pdf(pdf_path, config)
+        sections, _, _, _, _, title_map = parse_pdf(pdf_path, config)
         if not sections: continue
         
         ids, documents, metadatas = [], [], []
         for sec_num, sec_data in sections.items():
-            doc_id = f"{config['act_name']}_sec_{sec_num}"
-            ids.append(doc_id)
-            documents.append(sec_data["content"])
-            metadatas.append({
-                "source_type": "statute",
-                "act_name": config["act_name"],
-                "section_no": sec_num,
-                "partial_coverage": config["partial_coverage"],
-                "unverified_currency": config.get("unverified_currency", False),
-                "legal_era": config["legal_era"],
-                "text_as_of": config["text_as_of"],
-                "source_dataset": config["source_dataset"]
-            })
+            sec_title = sec_data["title"]
+            chunks = split_section_into_subsections(config["act_name"], sec_num, sec_title, sec_data["content"])
+            for chunk_id, chunk_text in chunks:
+                ids.append(chunk_id)
+                documents.append(chunk_text)
+                metadatas.append({
+                    "source_type": "statute",
+                    "act_name": config["act_name"],
+                    "section_no": sec_num,
+                    "title": sec_title,
+                    "partial_coverage": config["partial_coverage"],
+                    "unverified_currency": config.get("unverified_currency", False),
+                    "legal_era": config["legal_era"],
+                    "text_as_of": config["text_as_of"],
+                    "source_dataset": config["source_dataset"]
+                })
             
         coll.upsert(ids=ids, documents=documents, metadatas=metadatas)
         ingested_counts[config["act_name"]] = len(ids)
+
+    # 2. Ingest Retained HF Acts
+    print("\nIngesting retained HuggingFace dataset statutes...")
+    try:
+        from datasets import load_dataset
+        ds = load_dataset('mratanusarkar/Indian-Laws', split='train')
         
-    print("--- INGESTION SUMMARY PER ACT ---")
+        for hf_title, hf_meta in RETAINED_HF_ACTS.items():
+            hf_rows = [r for r in ds if r.get("act_title") == hf_title]
+            if not hf_rows: continue
+            
+            ids, documents, metadatas = [], [], []
+            for row in hf_rows:
+                sec_num = str(row.get("section", "")).strip()
+                law_text = norm_space(row.get("law", ""))
+                if not sec_num or not law_text: continue
+                
+                lines = law_text.split('\n')
+                first_line = lines[0] if lines else ""
+                title = first_line[:100]
+                
+                chunks = split_section_into_subsections(hf_meta["act_name"], sec_num, title, law_text)
+                for chunk_id, chunk_text in chunks:
+                    ids.append(chunk_id)
+                    documents.append(chunk_text)
+                    metadatas.append({
+                        "source_type": "statute",
+                        "act_name": hf_meta["act_name"],
+                        "section_no": sec_num,
+                        "title": title,
+                        "partial_coverage": hf_meta["partial_coverage"],
+                        "unverified_currency": hf_meta["unverified_currency"],
+                        "legal_era": hf_meta["legal_era"],
+                        "text_as_of": hf_meta["text_as_of"],
+                        "source_dataset": hf_meta["source_dataset"]
+                    })
+                    
+            if ids:
+                coll.upsert(ids=ids, documents=documents, metadatas=metadatas)
+                ingested_counts[hf_meta["act_name"]] = len(ids)
+    except Exception as e:
+        print(f"HF Dataset Ingestion Error: {e}")
+        
+    print("\n--- INGESTION SUMMARY PER ACT ---")
     for act_name, count in ingested_counts.items():
-        print(f" - {act_name}: {count} sections")
+        print(f" - {act_name}: {count} vector chunks")
     print(f"Total Collection Count: {coll.count()}\n")
-    
-    # Sample Retrievals
-    print("--- 5 SAMPLE RETRIEVALS FROM SCRATCH VAULT ---")
-    sample_queries = [
-        "punishment for murder",
-        "anticipatory bail",
-        "cheating and dishonestly inducing delivery of property",
-        "dowry death",
-        "special powers of High Court regarding bail"
-    ]
-    
-    for q in sample_queries:
-        res = coll.query(query_texts=[q], n_results=3)
-        print(f"\nQuery: '{q}'")
-        if res and res.get("documents"):
-            for d, dist, m in zip(res["documents"][0], res["distances"][0], res["metadatas"][0]):
-                flags = []
-                if m.get("partial_coverage"): flags.append("PARTIAL_COVERAGE")
-                if m.get("unverified_currency"): flags.append("UNVERIFIED_CURRENCY")
-                if m.get("legal_era"): flags.append(m.get("legal_era"))
-                flag_str = f" [{', '.join(flags)}]" if flags else ""
-                print(f"  - Dist: {dist:.4f} | {m['act_name']} (Section {m['section_no']}){flag_str}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingest Statute PDFs")
+    parser = argparse.ArgumentParser(description="Ingest Statute PDFs and Retained Central Acts")
     parser.add_argument("--pdf-dir", default="data/statute_pdfs", help="Directory containing PDFs")
     parser.add_argument("--dry-run", action="store_true", help="Parse and report without writing to ChromaDB")
     parser.add_argument("--strict", action="store_true", help="Exit 1 on skipped files/Bills in dry-run")
     parser.add_argument("--target", choices=["scratch", "prod"], default="scratch", help="Vector store target")
     parser.add_argument("--confirm", action="store_true", help="Confirm writing to production vector store")
+    parser.add_argument("--reset-statutes", action="store_true", help="Reset ONLY statute records prior to ingestion")
     args = parser.parse_args()
     
     if args.dry_run:
         run_dry_run(args.pdf_dir, strict=args.strict)
     else:
-        run_ingest(args.pdf_dir, target=args.target, confirm=args.confirm)
+        run_ingest(args.pdf_dir, target=args.target, confirm=args.confirm, reset_statutes=args.reset_statutes)

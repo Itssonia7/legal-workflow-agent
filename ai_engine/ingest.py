@@ -3,14 +3,47 @@ import tiktoken
 import chromadb
 from chromadb.utils import embedding_functions
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import pytesseract
+from pdf2image import convert_from_path
+from PIL import Image
+
+def smart_extract_text(file_path: str) -> list[Document]:
+    extracted_text = ""
+    file_ext = file_path.lower().split('.')[-1]
+    
+    if file_ext in ['jpg', 'jpeg', 'png']:
+        print(f"Running OCR on image: {file_path}")
+        extracted_text = pytesseract.image_to_string(Image.open(file_path))
+        
+    elif file_ext == 'pdf':
+        print(f"Converting Scanned PDF to images for OCR: {file_path}")
+        pages = convert_from_path(file_path)
+        for page_num, page_image in enumerate(pages):
+            print(f"Running OCR on page {page_num + 1}...")
+            extracted_text += pytesseract.image_to_string(page_image) + "\n\n"
+            
+    return [Document(page_content=extracted_text, metadata={"source": file_path, "type": "ocr_processed"})]
 
 def process_legal_document(pdf_path, case_id=None, doc_id=None):
     print(f"Loading document: {pdf_path}...")
     
-    # Task 1: Load the PDF
-    loader = PyPDFLoader(pdf_path)
-    documents = loader.load()
+    # Task 1: Load Document (Smart OCR Routing)
+    file_ext = pdf_path.lower().split('.')[-1]
+    
+    if file_ext in ['jpg', 'jpeg', 'png']:
+        documents = smart_extract_text(pdf_path)
+    elif file_ext == 'pdf':
+        loader = PyPDFLoader(pdf_path)
+        documents = loader.load()
+        
+        # Scanned PDF Fallback
+        if not documents or not documents[0].page_content.strip():
+            print("No text found in PDF. Assuming scanned, falling back to OCR...")
+            documents = smart_extract_text(pdf_path)
+    else:
+        raise ValueError(f"Unsupported file type: {file_ext}")
     
     # Task 2: Split using token-based counting & legal-aware separators
     encoder = tiktoken.get_encoding("cl100k_base")
@@ -86,6 +119,21 @@ def process_legal_document(pdf_path, case_id=None, doc_id=None):
     )
     
     print("Ingestion complete! Vectors stored in ./chroma_db")
+
+def delete_document_vectors(doc_id):
+    """Deletes all chunks associated with a document_id from ChromaDB."""
+    if not doc_id:
+        return
+    db_path = os.path.join(os.path.dirname(__file__), "chroma_db")
+    client = chromadb.PersistentClient(path=db_path)
+    embedding_func = embedding_functions.DefaultEmbeddingFunction()
+    collection = client.get_or_create_collection(
+        name="legal_knowledge_vault",
+        embedding_function=embedding_func,
+        metadata={"hnsw:space": "cosine"}
+    )
+    collection.delete(where={"document_id": str(doc_id)})
+    print(f"[ChromaDB] Deleted chunks for document_id={doc_id}")
 
 if __name__ == "__main__":
     sample_pdf = "sample.pdf" 

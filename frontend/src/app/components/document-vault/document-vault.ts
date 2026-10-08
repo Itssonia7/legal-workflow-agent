@@ -17,6 +17,7 @@ export class DocumentVault implements OnInit {
   selectedCaseId: number | null = null;
   selectedFile: File | null = null;
   uploading = false;
+  deletingId: number | null = null;
 
   constructor(private legalService: LegalService, private cdr: ChangeDetectorRef) {}
 
@@ -65,6 +66,26 @@ export class DocumentVault implements OnInit {
       error: (err) => {
         this.uploading = false;
         alert('Failed to upload/ingest document: ' + (err.error?.error || JSON.stringify(err.error)));
+      }
+    });
+  }
+
+  deleteDocument(doc: any): void {
+    if (!confirm(`Are you sure you want to delete "${doc.name}" from the vault and vector database?`)) {
+      return;
+    }
+
+    this.deletingId = doc.id;
+    this.legalService.deleteDocument(doc.id).subscribe({
+      next: () => {
+        this.documents = this.documents.filter(d => d.id !== doc.id);
+        this.deletingId = null;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.deletingId = null;
+        alert('Failed to delete document: ' + (err.error?.detail || err.message || 'Unknown error'));
+        this.cdr.detectChanges();
       }
     });
   }

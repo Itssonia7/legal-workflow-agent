@@ -51,6 +51,10 @@ export class LegalService {
     return this.http.get<any[]>(`${this.apiUrl}/documents/`, this.getHeaders());
   }
 
+  deleteDocument(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/documents/${id}/`, this.getHeaders());
+  }
+
   uploadDocument(caseId: number, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('case_file', caseId.toString());

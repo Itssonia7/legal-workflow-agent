@@ -28,16 +28,16 @@ def research_agent(state: AgentState):
     statute_results = search_legal_documents(search_terms, source_type="statute", k=6)
     statute_context = "\n\n".join(statute_results)
     
-    # 2. Query Drawer B: Client Case Files
+    # 2. Query Drawer B: Client Case Files (Retrieve comprehensive chunks across all case documents)
     print(f"[Researcher] Querying Drawer B (Case Files) for Case ID: {case_id}...")
-    case_results = search_legal_documents(search_terms, source_type="case_file", case_id=case_id)
+    case_results = search_legal_documents(search_terms, source_type="case_file", case_id=case_id, k=10)
     case_context = "\n\n".join(case_results)
     
     # 3. Combine them cleanly with strict boundaries
     combined_context = (
         "--- LEGAL STATUTES (OBJECTIVE FACT) ---\n"
         f"{statute_context if statute_context else 'No statutory provisions found.'}\n\n"
-        "--- CLIENT CASE FACTS (UPLOADED EVIDENCE) ---\n"
+        "--- CLIENT CASE FACTS & MULTI-DOCUMENT EVIDENCE ---\n"
         f"{case_context if case_context else 'No case file facts uploaded yet.'}"
     )
     
@@ -211,6 +211,9 @@ def drafter_agent(state: AgentState):
 
     PRIORITY RULE: The lawyer's revision instructions STRICTLY SUPERSEDE all default templates, standard placeholders, initial case prompts, and earlier draft content.
     You MUST adopt ALL modifications requested by the lawyer (including advocate name, contact details, dates, claim amounts, deadlines, and factual adjustments) verbatim.
+    
+    IMMUTABILITY OF UNCHANGED FIELDS:
+    Every other fact, phone number, mobile number, address, client identifier, and text segment NOT explicitly mentioned in the lawyer's revision instructions MUST be preserved EXACTLY as it appeared in the Previous Draft. NEVER alter, reformat, or invent unmentioned phone numbers, contact details, or dates.
     -----------------------------------------------------------------------------------
     """
 
@@ -245,11 +248,13 @@ def drafter_agent(state: AgentState):
        - If the lawyer explicitly specifies an Advocate name or contact details in the user request or revision instructions, use those EXACT details in the letterhead and signature blocks.
        - ONLY IF NO advocate name is provided by the lawyer, you MUST strictly use fillable blanks: 'Chambers of Adv. ____________________ [Advocate Name]' in the letterhead, and 'Adv. ____________________ [Advocate Name]' in the signature.
        - NEVER invent or assume an advocate name, and NEVER name the Advocate after the Client.
-    4. UNIVERSAL FACTUAL COMPLETENESS:
-       - Under STATEMENT OF FACTS & CAUSE OF ACTION, narrate all chronological facts, dates, entities, and incidents directly from the Client Case Facts. In paragraph 1, identify the client and residence.
+    4. UNIVERSAL FACTUAL COMPLETENESS (MULTI-DOCUMENT EVIDENCE SYNTHESIS):
+       - Under STATEMENT OF FACTS & CAUSE OF ACTION, narrate all chronological facts, dates, entities, forensic findings, amounts, FIR details, and incidents directly from ALL provided Client Case Facts and Documents.
+       - When multiple documents are provided in the case facts (e.g. statement of incident, forensic audit report, transaction logs, FIR, notices), you MUST chronologically synthesize and incorporate the factual details and evidence from ALL documents without omitting any party, transaction, or finding.
+       - In paragraph 1, identify the client and residence.
     5. STATUTORY INTEGRITY & REMEDIES:
        - Cite exact statutory provisions provided in the Legal Statutes.
-       - Extract exact damage amounts, specific actions (e.g., cease and desist), and deadlines directly from the Client Case Facts or Lawyer's Feedback. If no specific monetary amount is provided, demand compliance without inventing financial figures.
+       - Extract exact damage amounts, specific actions (e.g., cease and desist, refund, compensation), and deadlines directly from the Client Case Facts or Lawyer's Feedback. If no specific monetary amount is provided, demand compliance without inventing financial figures.
        - NEVER use placeholder phrases like 'as quantified in the case facts'.
     6. PRIVACY PROTECTION:
        - Use context to mask sensitive personal identifiers (like Aadhaar or PAN) with 'XXXX', but do NOT mask general reference numbers, bank accounts, or dates.

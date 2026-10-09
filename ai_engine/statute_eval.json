@@ -1,212 +1,282 @@
 [
   {
-    "query": "punishment for murder under BNS",
-    "category": "new_criminal_code",
-    "expected": [["Bharatiya Nyaya Sanhita, 2023", "103"]]
+    "id": 1,
+    "query": "client was arrested without warrant, how do we apply for his release before the chargesheet is filed",
+    "category": "plain_lawyer_language",
+    "expected": [["Code of Criminal Procedure, 1973", "167"], ["Bharatiya Nagarik Suraksha Sanhita, 2023", "187"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "cheating and dishonestly inducing delivery of property in new penal code",
-    "category": "new_criminal_code",
-    "expected": [["Bharatiya Nyaya Sanhita, 2023", "318"]]
+    "id": 2,
+    "query": "my client fears police will arrest him in a non-bailable case, what protective order can we get from High Court",
+    "category": "plain_lawyer_language",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "482"], ["Code of Criminal Procedure, 1973", "438"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "punishment for theft under Bharatiya Nyaya Sanhita",
-    "category": "new_criminal_code",
-    "expected": [["Bharatiya Nyaya Sanhita, 2023", "303"]]
+    "id": 3,
+    "query": "what is the sentence if someone intentionally kills another person with malice",
+    "category": "plain_lawyer_language",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "103"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "dowry death under BNS 2023",
-    "category": "new_criminal_code",
-    "expected": [["Bharatiya Nyaya Sanhita, 2023", "80"]]
+    "id": 4,
+    "query": "tricked my client into handing over money by fake promises",
+    "category": "plain_lawyer_language",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "318"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "punishment for rape in Bharatiya Nyaya Sanhita",
-    "category": "new_criminal_code",
-    "expected": [["Bharatiya Nyaya Sanhita, 2023", "64"]]
+    "id": 5,
+    "query": "accused dishonestly took a laptop from victim's possession without consent",
+    "category": "plain_lawyer_language",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "303"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "organized crime penalty BNS",
-    "category": "new_criminal_code",
-    "expected": [["Bharatiya Nyaya Sanhita, 2023", "111"]]
+    "id": 6,
+    "query": "cheque bounced due to insufficient funds in bank account",
+    "category": "plain_lawyer_language",
+    "expected": [["Negotiable Instruments Act, 1881", "138"]],
+    "source": "from-memory"
   },
   {
-    "query": "punishment for murder under IPC 1860",
-    "category": "old_criminal_code",
-    "expected": [["Indian Penal Code, 1860", "302"]]
+    "id": 7,
+    "query": "wife filed for monthly living expenses and maintenance from husband",
+    "category": "plain_lawyer_language",
+    "expected": [["Code of Criminal Procedure, 1973", "125"], ["Bharatiya Nagarik Suraksha Sanhita, 2023", "144"]],
+    "source": "from-memory"
   },
   {
-    "query": "cheating under section 420 Indian Penal Code",
-    "category": "old_criminal_code",
-    "expected": [["Indian Penal Code, 1860", "420"]]
+    "id": 8,
+    "query": "time limit for filing a civil lawsuit after breach of contract",
+    "category": "plain_lawyer_language",
+    "expected": [["Limitation Act, 1963", "3"]],
+    "source": "from-memory"
   },
   {
-    "query": "dowry death under section 304B IPC",
-    "category": "old_criminal_code",
-    "expected": [["Indian Penal Code, 1860", "304B"]]
+    "id": 9,
+    "query": "compensation claimed for financial harm caused when seller broke the contract",
+    "category": "plain_lawyer_language",
+    "expected": [["Indian Contract Act, 1872", "73"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "punishment for rape under IPC section 376",
-    "category": "old_criminal_code",
-    "expected": [["Indian Penal Code, 1860", "376"]]
+    "id": 10,
+    "query": "seeking divorce on grounds of cruelty and desertion by spouse",
+    "category": "plain_lawyer_language",
+    "expected": [["Hindu Marriage Act, 1955", "13"]],
+    "source": "from-memory"
   },
   {
-    "query": "causing death by negligence under IPC 304A",
-    "category": "old_criminal_code",
-    "expected": [["Indian Penal Code, 1860", "304A"]]
+    "id": 11,
+    "query": "is registration mandatory for sale deed of immovable property worth over hundred rupees",
+    "category": "plain_lawyer_language",
+    "expected": [["Registration Act, 1908", "17"]],
+    "source": "from-memory"
   },
   {
-    "query": "cruelty by husband or relatives section 498A IPC",
-    "category": "old_criminal_code",
-    "expected": [["Indian Penal Code, 1860", "498A"]]
+    "id": 12,
+    "query": "power of High Court to issue writs for enforcement of fundamental rights",
+    "category": "plain_lawyer_language",
+    "expected": [["Constitution of India, 1949", "226"]],
+    "source": "from-memory"
   },
   {
+    "id": 13,
+    "query": "consumer complaint regarding defective product and unfair trade practice",
+    "category": "plain_lawyer_language",
+    "expected": [["Consumer Protection Act, 2019", "2"]],
+    "source": "verified-in-text"
+  },
+  {
+    "id": 14,
+    "query": "disqualification or misconduct proceeding against an advocate",
+    "category": "plain_lawyer_language",
+    "expected": [["Advocates Act, 1961", "35"]],
+    "source": "from-memory"
+  },
+  {
+    "id": 15,
+    "query": "transfer of property by oral agreement or written instrument",
+    "category": "plain_lawyer_language",
+    "expected": [["Transfer of Property Act, 1882", "5"]],
+    "source": "from-memory"
+  },
+  {
+    "id": 16,
     "query": "anticipatory bail",
-    "category": "bail_and_criminal_procedure",
-    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "482"], ["Code of Criminal Procedure, 1973", "438"]]
+    "category": "bns_bnss_core",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "482"], ["Code of Criminal Procedure, 1973", "438"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "bail for non-bailable offence",
-    "category": "bail_and_criminal_procedure",
-    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "480"], ["Code of Criminal Procedure, 1973", "437"]]
+    "id": 17,
+    "query": "punishment for murder",
+    "category": "bns_bnss_core",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "103"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "special powers of High Court or Court of Session regarding bail",
-    "category": "bail_and_criminal_procedure",
-    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "483"], ["Code of Criminal Procedure, 1973", "439"]]
+    "id": 18,
+    "query": "cheating",
+    "category": "bns_bnss_core",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "318"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "maintenance for wife and children",
-    "category": "bail_and_criminal_procedure",
-    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "144"], ["Code of Criminal Procedure, 1973", "125"]]
+    "id": 19,
+    "query": "theft",
+    "category": "bns_bnss_core",
+    "expected": [["Bharatiya Nyaya Sanhita, 2023", "303"]],
+    "source": "verified-in-text"
   },
   {
+    "id": 20,
     "query": "bail by High Court",
-    "category": "bail_and_criminal_procedure",
-    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "483"], ["Code of Criminal Procedure, 1973", "439"]]
+    "category": "bns_bnss_core",
+    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "483"], ["Code of Criminal Procedure, 1973", "439"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "police officer diary of proceedings in investigation",
-    "category": "bail_and_criminal_procedure",
-    "expected": [["Bharatiya Nagarik Suraksha Sanhita, 2023", "193"], ["Code of Criminal Procedure, 1973", "172"]]
-  },
-  {
-    "query": "electronic evidence admissibility",
-    "category": "evidence_electronic_records",
-    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "63"], ["Indian Evidence Act, 1872", "65B"]]
-  },
-  {
-    "query": "admissibility of electronic records in court",
-    "category": "evidence_electronic_records",
-    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "63"], ["Indian Evidence Act, 1872", "65B"]]
-  },
-  {
-    "query": "primary evidence definition",
-    "category": "evidence_electronic_records",
-    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "57"], ["Indian Evidence Act, 1872", "62"]]
-  },
-  {
-    "query": "secondary evidence definition and rules",
-    "category": "evidence_electronic_records",
-    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "58"], ["Indian Evidence Act, 1872", "63"]]
-  },
-  {
-    "query": "burden of proof in criminal trials",
-    "category": "evidence_electronic_records",
-    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "104"], ["Indian Evidence Act, 1872", "101"]]
-  },
-  {
-    "query": "accomplice evidence and testimony",
-    "category": "evidence_electronic_records",
-    "expected": [["Bharatiya Sakshya Adhiniyam, 2023", "138"], ["Indian Evidence Act, 1872", "133"]]
-  },
-  {
+    "id": 21,
     "query": "dishonoured cheque",
     "category": "retained_hf_acts",
-    "expected": [["Negotiable Instruments Act, 1881", "138"]]
+    "expected": [["Negotiable Instruments Act, 1881", "138"]],
+    "source": "from-memory"
   },
   {
-    "query": "dishonour of cheque for insufficiency of funds",
+    "id": 22,
+    "query": "maintenance for wife",
     "category": "retained_hf_acts",
-    "expected": [["Negotiable Instruments Act, 1881", "138"]]
+    "expected": [["Code of Criminal Procedure, 1973", "125"], ["Bharatiya Nagarik Suraksha Sanhita, 2023", "144"]],
+    "source": "from-memory"
   },
   {
-    "query": "damages for breach of contract",
+    "id": 23,
+    "query": "remedies for breach of contract",
     "category": "retained_hf_acts",
-    "expected": [["Indian Contract Act, 1872", "73"]]
+    "expected": [["Indian Contract Act, 1872", "73"]],
+    "source": "verified-in-text"
   },
   {
-    "query": "rejection of plaint for lack of cause of action Order VII Rule 11",
+    "id": 24,
+    "query": "limitation period for suits",
     "category": "retained_hf_acts",
-    "expected": [["Code of Civil Procedure, 1908", "Order 7 Rule 11"]]
+    "expected": [["Limitation Act, 1963", "3"]],
+    "source": "from-memory"
   },
   {
-    "query": "limitation period for filing suit",
+    "id": 25,
+    "query": "right to equality under constitution",
     "category": "retained_hf_acts",
-    "expected": [["Limitation Act, 1963", "3"]]
+    "expected": [["Constitution of India, 1949", "14"]],
+    "source": "from-memory"
   },
   {
-    "query": "remedies for breach of trust under contract",
-    "category": "retained_hf_acts",
-    "expected": [["Indian Contract Act, 1872", "73"]]
+    "id": 26,
+    "query": "punishment for murder under section 302 of Indian Penal Code 1860",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "cyber terrorism penalty under IT Act section 66F",
-    "category": "legal_topics_not_covered",
-    "expected": []
+    "id": 27,
+    "query": "cheating and dishonestly inducing delivery of property under section 420 IPC",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "compensation for failure to protect sensitive personal data under IT Act 43A",
-    "category": "legal_topics_not_covered",
-    "expected": []
+    "id": 28,
+    "query": "admissibility of electronic records certificate under Section 65B Indian Evidence Act 1872",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "specific performance as mandatory general rule under 2018 amendment",
-    "category": "legal_topics_not_covered",
-    "expected": []
+    "id": 29,
+    "query": "electronic evidence admissibility under Section 63 Bharatiya Sakshya Adhiniyam 2023",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "identity theft punishment under Information Technology Act 66C",
-    "category": "legal_topics_not_covered",
-    "expected": []
+    "id": 30,
+    "query": "hacking and identity theft under Section 66C Information Technology Act 2000",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "publishing sexually explicit content online section 67A IT Act",
-    "category": "legal_topics_not_covered",
-    "expected": []
+    "id": 31,
+    "query": "discretionary specific performance of contract under Section 10 Specific Relief Act 1963",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "interim compensation for dishonoured cheque section 143A NI Act",
-    "category": "legal_topics_not_covered",
-    "expected": []
+    "id": 32,
+    "query": "patent infringement and compulsory licensing under Indian Patents Act 1970",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "how to bake a chocolate cake",
+    "id": 33,
+    "query": "right to information application procedure under RTI Act 2005",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
+  },
+  {
+    "id": 34,
+    "query": "dowry death under Section 304B IPC",
+    "category": "not_covered",
+    "expected": [],
+    "source": "verified-in-text"
+  },
+  {
+    "id": 35,
+    "query": "quantum mechanical wave function Schrödinger equation",
     "category": "unrelated",
-    "expected": []
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "best places to visit in Tokyo",
+    "id": 36,
+    "query": "recipe for baking sourdough bread at home",
     "category": "unrelated",
-    "expected": []
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "quantum computing principles",
+    "id": 37,
+    "query": "how to change engine oil in a Toyota Camry",
     "category": "unrelated",
-    "expected": []
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "weather forecast for Delhi",
+    "id": 38,
+    "query": "rules of basketball five player positions",
     "category": "unrelated",
-    "expected": []
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "football match score prediction",
+    "id": 39,
+    "query": "NASA James Webb Space Telescope discoveries",
     "category": "unrelated",
-    "expected": []
+    "expected": [],
+    "source": "verified-in-text"
   },
   {
-    "query": "how to configure nginx web server",
+    "id": 40,
+    "query": "weather forecast Tokyo weekend rain probability",
     "category": "unrelated",
-    "expected": []
+    "expected": [],
+    "source": "verified-in-text"
   }
 ]

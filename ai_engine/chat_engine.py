@@ -12,29 +12,20 @@ try:
 except ImportError:
     from utils import check_ollama_health
 
-# Base L2 Distance Threshold (default 1.15 for L2 space)
 DISTANCE_THRESHOLD = float(os.getenv("DISTANCE_THRESHOLD", "1.15"))
-COSINE_DISTANCE_THRESHOLD = DISTANCE_THRESHOLD  # Alias for backward compatibility
+COSINE_DISTANCE_THRESHOLD = DISTANCE_THRESHOLD
 
-# Aadhaar & PAN regex patterns
 AADHAAR_REGEX = re.compile(r'\b\d{4}\s?\d{4}\s?\d{4}\b')
 PAN_REGEX = re.compile(r'\b[A-Z]{5}\d{4}[A-Z]\b')
 
 def redact_pii(text: str) -> str:
-    """
-    Applies deterministic PII redaction for Aadhaar and PAN numbers.
-    """
     if not text:
         return text
     text = AADHAAR_REGEX.sub('XXXX XXXX XXXX', text)
     text = PAN_REGEX.sub('XXXXX0000X', text)
     return text
 
-
 def get_chroma_collection():
-    """
-    Returns the persistent ChromaDB collection.
-    """
     db_path = os.getenv("CHROMA_PATH", os.path.join(os.path.dirname(__file__), "chroma_db"))
     collection_name = os.getenv("COLLECTION_NAME", "legal_knowledge_vault")
     client = chromadb.PersistentClient(path=db_path)
@@ -44,41 +35,41 @@ def get_chroma_collection():
         embedding_function=embedding_func
     )
 
-
 def get_effective_distance_threshold(collection):
-    """
-    Returns metric-aware threshold:
-    If collection uses 'cosine' distance metric, threshold is half of L2 (sqL2 = 2 * cosine_dist).
-    If collection uses 'l2' (or None), returns base DISTANCE_THRESHOLD (1.15).
-    """
     metric = (collection.metadata or {}).get("hnsw:space", "l2")
     if metric == "cosine":
         return DISTANCE_THRESHOLD / 2.0
     return DISTANCE_THRESHOLD
 
-
-
+def deduplicate_statute_chunks(chunks: list) -> list:
+    """
+    Deduplicates statute chunks by (act_name, section_no) keeping the chunk
+    with lowest distance so the context window is not filled with multiple parts of one section.
+    """
+    seen_keys = set()
+    deduped = []
+    sorted_chunks = sorted(chunks, key=lambda c: c.get("distance", 999.0))
+    for c in sorted_chunks:
+        if c.get("type") == "statute":
+            sec_key = (c.get("act_name"), str(c.get("section_no", "")).strip())
+            if sec_key in seen_keys:
+                continue
+            seen_keys.add(sec_key)
+        deduped.append(c)
+    return deduped
 
 def retrieve_chat_context_private(allowed_case_ids: list, query: str, selected_case_id: str = None, k_case: int = 4, k_statute: int = 4):
-    """
-    Retrieves context for an authenticated user.
-    Narrows to allowed_case_ids (or selected_case_id if specified and allowed).
-    Filters results by metric-aware DISTANCE_THRESHOLD.
-    Returns: (relevant_chunks_list, sources_list, is_grounded_bool)
-    """
     collection = get_chroma_collection()
     threshold = get_effective_distance_threshold(collection)
     relevant_chunks = []
     sources = []
     
-    # 1. Determine target case IDs
     target_case_ids = []
     if selected_case_id and str(selected_case_id) in [str(cid) for cid in allowed_case_ids]:
         target_case_ids = [str(selected_case_id)]
     else:
         target_case_ids = [str(cid) for cid in allowed_case_ids]
 
-    # 2. Search Case Files if target_case_ids is non-empty
     if target_case_ids:
         where_clause = None
         if len(target_case_ids) == 1:
@@ -116,18 +107,9 @@ def retrieve_chat_context_private(allowed_case_ids: list, query: str, selected_c
                             "case_id": meta.get("case_id", ""),
                             "distance": dist
                         })
-                        source_obj = {
-                            "type": "case_file",
-                            "label": f"Case Document: {source_file}",
-                            "file": source_file,
-                            "case_id": meta.get("case_id", "")
-                        }
-                        if source_obj not in sources:
-                            sources.append(source_obj)
         except Exception as e:
             print(f"[ChatEngine] Error querying case files: {e}")
 
-    # 3. Search Statutes
     try:
         statute_results = collection.query(
             query_texts=[query],
@@ -154,28 +136,34 @@ def retrieve_chat_context_private(allowed_case_ids: list, query: str, selected_c
                         "legal_era": meta.get("legal_era", ""),
                         "pre_2024_code": meta.get("pre_2024_code", False) or meta.get("legal_era") == "pre-2024-criminal-codes"
                     })
-                    source_label = f"Statute: {act_name} ({sec_no})" if sec_no else f"Statute: {act_name}"
-                    source_obj = {
-                        "type": "statute",
-                        "label": source_label,
-                        "act": act_name,
-                        "section": sec_no
-                    }
-                    if source_obj not in sources:
-                        sources.append(source_obj)
     except Exception as e:
         print(f"[ChatEngine] Error querying statutes: {e}")
+
+    relevant_chunks = deduplicate_statute_chunks(relevant_chunks)
+    
+    for c in relevant_chunks:
+        if c.get("type") == "case_file":
+            s_obj = {
+                "type": "case_file",
+                "label": f"Case Document: {c.get('source_file')}",
+                "file": c.get("source_file"),
+                "case_id": c.get("case_id")
+            }
+        else:
+            sec_str = f" ({c.get('section_no')})" if c.get('section_no') else ""
+            s_obj = {
+                "type": "statute",
+                "label": f"Statute: {c.get('act_name')}{sec_str}",
+                "act": c.get("act_name"),
+                "section": c.get("section_no")
+            }
+        if s_obj not in sources:
+            sources.append(s_obj)
 
     is_grounded = len(relevant_chunks) > 0
     return relevant_chunks, sources, is_grounded
 
-
 def retrieve_chat_context_public(query: str, k: int = 5):
-    """
-    Retrieves context for public non-authenticated users.
-    STRICTLY enforced server-side to source_type="statute" only.
-    Returns: (relevant_chunks_list, sources_list, is_grounded_bool)
-    """
     collection = get_chroma_collection()
     threshold = get_effective_distance_threshold(collection)
     relevant_chunks = []
@@ -207,27 +195,26 @@ def retrieve_chat_context_public(query: str, k: int = 5):
                         "legal_era": meta.get("legal_era", ""),
                         "pre_2024_code": meta.get("pre_2024_code", False) or meta.get("legal_era") == "pre-2024-criminal-codes"
                     })
-                    source_label = f"Statute: {act_name} ({sec_no})" if sec_no else f"Statute: {act_name}"
-                    source_obj = {
-                        "type": "statute",
-                        "label": source_label,
-                        "act": act_name,
-                        "section": sec_no
-                    }
-                    if source_obj not in sources:
-                        sources.append(source_obj)
     except Exception as e:
         print(f"[ChatEngine] Public statute retrieval error: {e}")
+
+    relevant_chunks = deduplicate_statute_chunks(relevant_chunks)
+
+    for c in relevant_chunks:
+        sec_str = f" ({c.get('section_no')})" if c.get('section_no') else ""
+        s_obj = {
+            "type": "statute",
+            "label": f"Statute: {c.get('act_name')}{sec_str}",
+            "act": c.get("act_name"),
+            "section": c.get("section_no")
+        }
+        if s_obj not in sources:
+            sources.append(s_obj)
 
     is_grounded = len(relevant_chunks) > 0
     return relevant_chunks, sources, is_grounded
 
-
 def truncate_history_to_token_budget(messages: list, max_tokens: int = 2000) -> list:
-    """
-    Truncates older conversation history turns using tiktoken encoding
-    to prevent local Ollama context overflow.
-    """
     try:
         encoder = tiktoken.get_encoding("cl100k_base")
     except Exception:
@@ -235,7 +222,6 @@ def truncate_history_to_token_budget(messages: list, max_tokens: int = 2000) -> 
 
     total_tokens = 0
     kept_messages = []
-    
     for msg in reversed(messages):
         content = msg.get("content", "")
         tokens = len(encoder.encode(content))
@@ -246,12 +232,7 @@ def truncate_history_to_token_budget(messages: list, max_tokens: int = 2000) -> 
         
     return kept_messages
 
-
 class StreamRedactor:
-    """
-    Buffers streaming text tokens to detect and redact Aadhaar/PAN regexes
-    that may be split across stream chunk boundaries.
-    """
     def __init__(self, buffer_size: int = 30):
         self.buffer = ""
         self.buffer_size = buffer_size
@@ -260,11 +241,9 @@ class StreamRedactor:
         self.buffer += chunk
         if len(self.buffer) <= self.buffer_size:
             return ""
-        
         flush_len = len(self.buffer) - self.buffer_size
         to_flush = self.buffer[:flush_len]
         self.buffer = self.buffer[flush_len:]
-        
         return redact_pii(to_flush)
 
     def flush_remaining(self) -> str:
@@ -272,12 +251,7 @@ class StreamRedactor:
         self.buffer = ""
         return redact_pii(remaining)
 
-
 def build_context_block(context_chunks: list) -> str:
-    """
-    Constructs the formatted context block for LLM prompt generation, including
-    source tags and metadata warning flags.
-    """
     if not context_chunks:
         return "\nNo matching records found in database.\n"
         
@@ -300,18 +274,14 @@ def build_context_block(context_chunks: list) -> str:
             block += f"\n--- Source {source_tag}{flag_str} ---\n{chunk.get('content')}\n"
     return block
 
-
 def generate_chat_stream(query: str, history: list, context_chunks: list, is_grounded: bool, is_public: bool = False):
-    """
-    Generator yielding Server-Sent Events (SSE) data chunks for streaming HTTP response.
-    Includes fallback notice prepending, streaming PII redaction buffering, and final metadata event.
-    """
     if not check_ollama_health():
         error_json = json.dumps({"error": "Ollama service is currently unavailable. Please ensure local Ollama is running."})
         yield f"data: {error_json}\n\n"
         return
 
-    llm = ChatOllama(model="llama3", temperature=0.0)
+    # Explicitly set num_ctx=8192 for Llama-3 context window
+    llm = ChatOllama(model="llama3", num_ctx=8192, temperature=0.0)
 
     fallback_notice = ""
     if not is_grounded:
@@ -412,4 +382,3 @@ CRITICAL CITATION & STATUTE RULES:
         "sources": formatted_sources
     }
     yield f"data: {json.dumps(done_event)}\n\n"
-

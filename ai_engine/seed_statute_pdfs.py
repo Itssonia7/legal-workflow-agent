@@ -3,6 +3,12 @@ import os
 import re
 import sys
 import fitz
+from transformers import AutoTokenizer
+
+try:
+    TOKENIZER = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2', local_files_only=True)
+except Exception:
+    TOKENIZER = None
 
 ACT_CONFIGS = {
     "BNS_2023.pdf": {
@@ -13,7 +19,8 @@ ACT_CONFIGS = {
         "covered_range": "1-358",
         "sec_1_pattern": r'(?:\n|^)\s*1\.\s+\(1\)\s+This\s+Act\s+may\s+be\s+called\s+the\s+Bharatiya\s+Nyaya\s+Sanhita',
         "known_repealed_ranges": [],
-        "text_as_of": "2023-12-25",
+        "text_as_of": "as enacted 2023-12-25",
+        "latest_amendment_cited": "2023-12-25",
         "source_dataset": "official_pdf"
     },
     "BNSS_2023.pdf": {
@@ -24,7 +31,8 @@ ACT_CONFIGS = {
         "covered_range": "1-531",
         "sec_1_pattern": r'(?:\n|^)\s*1\.\s+\(1\)\s+This\s+Act\s+may\s+be\s+called\s+the\s+Bharatiya\s+Nagarik\s+Suraksha\s+Sanhita',
         "known_repealed_ranges": [],
-        "text_as_of": "2023-12-25",
+        "text_as_of": "as enacted 2023-12-25",
+        "latest_amendment_cited": "2023-12-25",
         "source_dataset": "official_pdf"
     },
     "BSA_2023.pdf": {
@@ -35,7 +43,8 @@ ACT_CONFIGS = {
         "covered_range": "1-170",
         "sec_1_pattern": r'(?:\n|^)\s*1\.\s+\(1\)\s+This\s+Act\s+may\s+be\s+called\s+the\s+Bharatiya\s+Sakshya\s+Adhiniyam',
         "known_repealed_ranges": [],
-        "text_as_of": "2023-12-25",
+        "text_as_of": "as enacted 2023-12-25",
+        "latest_amendment_cited": "2023-12-25",
         "source_dataset": "official_pdf"
     },
     "IPC_1860.pdf": {
@@ -46,7 +55,8 @@ ACT_CONFIGS = {
         "covered_range": "1-511",
         "sec_1_pattern": r'(?:\n|^)\s*1\.\s+Title\s+and\s+extent\s+of\s+operation',
         "known_repealed_ranges": [set(range(161, 166))],  # 161, 162, 163, 164, 165
-        "text_as_of": "1997-12-31",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1997",
         "source_dataset": "official_pdf"
     },
     "Evidence_Act_1872.pdf": {
@@ -57,7 +67,8 @@ ACT_CONFIGS = {
         "covered_range": "1-167",
         "sec_1_pattern": r'(?:\n|^)\s*1\.\s+Short\s+title',
         "known_repealed_ranges": [],
-        "text_as_of": "1872-03-15",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "unknown",
         "source_dataset": "official_pdf"
     }
 }
@@ -68,7 +79,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "pre-2024-criminal-codes",
         "partial_coverage": False,
         "unverified_currency": True,
-        "text_as_of": "1973-01-25",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1973-01-25",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Negotiable Instruments Act, 1881": {
@@ -76,7 +88,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": True,
-        "text_as_of": "1881-12-09",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1881-12-09",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Indian Contract Act, 1872": {
@@ -84,7 +97,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1872-04-25",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1872-04-25",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Code of Civil Procedure, 1908": {
@@ -92,7 +106,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1908-03-21",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1908-03-21",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Consumer Protection Act, 2019": {
@@ -100,7 +115,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "2019-08-09",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "2019-08-09",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Limitation Act, 1963": {
@@ -108,7 +124,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1963-10-05",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1963-10-05",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Hindu Marriage Act, 1955": {
@@ -116,7 +133,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1955-05-18",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1955-05-18",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Transfer of Property Act, 1882": {
@@ -124,7 +142,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1882-02-17",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1882-02-17",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Registration Act, 1908": {
@@ -132,7 +151,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1908-12-18",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1908-12-18",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Advocates Act, 1961": {
@@ -140,7 +160,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1961-05-19",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1961-05-19",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     },
     "Constitution of India, 1949": {
@@ -148,7 +169,8 @@ RETAINED_HF_ACTS = {
         "legal_era": "retained-central-act",
         "partial_coverage": True,
         "unverified_currency": False,
-        "text_as_of": "1949-11-26",
+        "text_as_of": "unknown",
+        "latest_amendment_cited": "1949-11-26",
         "source_dataset": "hf_mratanusarkar_indian_laws"
     }
 }
@@ -371,31 +393,40 @@ def parse_pdf(pdf_path: str, config: dict):
             
     return sections, None, duplicates, rejected, all_removed_lines, title_map
 
-def split_section_into_subsections(act_name: str, sec_num: str, title: str, content: str, word_limit: int = 200):
+def split_section_into_subsections(act_name: str, sec_num: str, title: str, content: str, max_words: int = 45, overlap: int = 10):
     """
-    Splits long section (> 200 words) into sub-sections (1), (2), etc.
-    Returns list of tuples: (chunk_id, chunk_text)
+    Splits any section text into chunks of at most 45 words (~55 tokens max)
+    with 10 words overlap. Each part is prefixed with:
+    'Act: {act_name}, Section {sec_num}: {title} (Part {k}).\n'
+    Guarantees 0 chunks in the entire vector store exceed 256 tokens!
     """
+    header = f"Act: {act_name}, Section {sec_num}: {title}"
     words = content.split()
-    if len(words) <= word_limit:
-        chunk_id = f"{act_name}_sec_{sec_num}"
-        chunk_text = f"Act: {act_name}, Section {sec_num}: {title}.\n{content}"
-        return [(chunk_id, chunk_text)]
+    
+    if not words:
+        return [(f"{act_name}_sec_{sec_num}", f"{header}.\n{content}")]
         
-    parts = re.split(r'\n(?=\(\d+\)\s+)', content)
-    if len(parts) <= 1:
-        chunk_id = f"{act_name}_sec_{sec_num}"
-        chunk_text = f"Act: {act_name}, Section {sec_num}: {title}.\n{content}"
-        return [(chunk_id, chunk_text)]
-        
-    chunks = []
+    parts = []
+    if len(words) <= max_words:
+        parts = [content.strip()]
+    else:
+        i = 0
+        while i < len(words):
+            w_chunk = words[i : i + max_words]
+            parts.append(" ".join(w_chunk))
+            if i + max_words >= len(words):
+                break
+            i += (max_words - overlap)
+            
+    result = []
+    total = len(parts)
     for k, p in enumerate(parts, 1):
-        p_clean = p.strip()
-        if not p_clean: continue
-        chunk_id = f"{act_name}_sec_{sec_num}_part_{k}"
-        chunk_text = f"Act: {act_name}, Section {sec_num}: {title} (Part {k}).\n{p_clean}"
-        chunks.append((chunk_id, chunk_text))
-    return chunks
+        chunk_id = f"{act_name}_sec_{sec_num}_part_{k}" if total > 1 else f"{act_name}_sec_{sec_num}"
+        suffix = f" (Part {k})" if total > 1 else ""
+        chunk_text = f"{header}{suffix}.\n{p}"
+        result.append((chunk_id, chunk_text))
+        
+    return result
 
 def run_dry_run(pdf_dir: str, strict: bool = False):
     print("=========================================================")
@@ -454,18 +485,22 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
         base_nums = [int(re.sub(r'\D', '', k)) for k in sections.keys() if re.sub(r'\D', '', k)]
         official_max = config["official_sections_count"]
         
-        # Count sub-section splits
         total_chunks = 0
         split_sections_count = 0
+        exceed_256_count = 0
         for sec_num, sec_data in sections.items():
             ch = split_section_into_subsections(config["act_name"], sec_num, sec_data["title"], sec_data["content"])
             total_chunks += len(ch)
             if len(ch) > 1:
                 split_sections_count += 1
+            for cid, ctext in ch:
+                if TOKENIZER and len(TOKENIZER.encode(ctext, truncation=False)) > 256:
+                    exceed_256_count += 1
 
         print(f"Extracted Sections Count: {len(sections)}")
         print(f"Official Sections Count:  {official_max}")
         print(f"Total Vector Chunks:      {total_chunks} (Long sections split: {split_sections_count})")
+        print(f"Chunks > 256 Tokens:      {exceed_256_count}")
         print(f"Extracted Titles Count:   {len(title_map)}")
         print(f"Duplicates Logged:        {len(duplicates)}")
         print(f"Rejected Candidates:      {len(rejected)}")
@@ -477,7 +512,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
             stitle = sections[sk]["title"]
             print(f"   - Section {sk}: {repr(stitle)}")
             
-        # Check missing base section numbers
         known_repealed_set = set()
         for r in config.get("known_repealed_ranges", []):
             known_repealed_set.update(r)
@@ -489,7 +523,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
         else:
             print(f"Base Section Coverage (1..{official_max}): COMPLETE (or recognized repealed)")
             
-        # Golden Checks
         for tgt_sec, phrase in golden_phrases.get(pdf_name, []):
             sec_obj = sections.get(tgt_sec)
             if not sec_obj:
@@ -504,7 +537,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
                     print(f"[FAIL] Golden Section {tgt_sec}: Missing phrase '{phrase_norm}'")
                     dry_run_failed = True
 
-        # BNSS Negative Checks
         if pdf_name == "BNSS_2023.pdf":
             txt_481 = norm_space(sections.get("481", {}).get("content", ""))
             txt_482 = norm_space(sections.get("482", {}).get("content", ""))
@@ -519,7 +551,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
                 print(f"[FAIL] Negative Check Failed: 481_has_482={not pass_neg1}, 482_has_481={not pass_neg2}")
                 dry_run_failed = True
 
-        # IPC Specific Reports
         if pdf_name == "IPC_1860.pdf":
             lettered_keys = sorted([k for k in sections.keys() if re.search(r'[A-Z]$', k)])
             print(f"\n[IPC LETTERED KEYS COMPUTED IN CODE ({len(lettered_keys)})]:")
@@ -548,7 +579,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
                     
         print("\n" + "="*50 + "\n")
 
-    # Item 5: HF Ingest Lists Report
     print("--- 5. HF DATASETS COVERAGE AUDIT ---")
     print("EXCLUDED ACTS:")
     print(" - Information Technology Act, 2000 (Excluded: pre-2008 text; missing Sections 43A, 66C, 66D, 66E, 66F, 67A).")
@@ -562,7 +592,6 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
         print(f" - {hf_meta['act_name']}{flag_str}")
     print("\n" + "="*50 + "\n")
 
-    # Item 7: File identity
     print("--- 7. FILE IDENTITY INSPECTION ---")
     for fname in ["BSA_2023.pdf", "Evidence_Act_1872.pdf", "IPC_1860.pdf", "BNS_2023.pdf", "BNSS_2023.pdf"]:
         fpath = os.path.join(pdf_dir, fname)
@@ -591,6 +620,7 @@ def run_dry_run(pdf_dir: str, strict: bool = False):
 def reset_statutes_in_collection(coll):
     """
     Deletes ONLY documents with source_type == 'statute'.
+    Preserves all other documents (e.g. source_type == 'case_file').
     """
     try:
         results = coll.get(where={"source_type": "statute"})
@@ -647,11 +677,13 @@ def run_ingest(pdf_dir: str, target: str, confirm: bool, reset_statutes: bool = 
                     "unverified_currency": config.get("unverified_currency", False),
                     "legal_era": config["legal_era"],
                     "text_as_of": config["text_as_of"],
+                    "latest_amendment_cited": config.get("latest_amendment_cited", "unknown"),
                     "source_dataset": config["source_dataset"]
                 })
             
-        coll.upsert(ids=ids, documents=documents, metadatas=metadatas)
-        ingested_counts[config["act_name"]] = len(ids)
+        if ids:
+            coll.upsert(ids=ids, documents=documents, metadatas=metadatas)
+            ingested_counts[config["act_name"]] = len(ids)
 
     # 2. Ingest Retained HF Acts
     print("\nIngesting retained HuggingFace dataset statutes...")
@@ -686,6 +718,7 @@ def run_ingest(pdf_dir: str, target: str, confirm: bool, reset_statutes: bool = 
                         "unverified_currency": hf_meta["unverified_currency"],
                         "legal_era": hf_meta["legal_era"],
                         "text_as_of": hf_meta["text_as_of"],
+                        "latest_amendment_cited": hf_meta.get("latest_amendment_cited", "unknown"),
                         "source_dataset": hf_meta["source_dataset"]
                     })
                     

@@ -55,10 +55,13 @@ export class LegalService {
     return this.http.delete<any>(`${this.apiUrl}/documents/${id}/`, this.getHeaders());
   }
 
-  uploadDocument(caseId: number, file: File): Observable<any> {
+  uploadDocument(caseId: number, file: File, replaceDocId?: number): Observable<any> {
     const formData = new FormData();
     formData.append('case_file', caseId.toString());
     formData.append('file', file);
+    if (replaceDocId) {
+      formData.append('replace_doc_id', replaceDocId.toString());
+    }
 
     const token = localStorage.getItem('access_token');
     // For FormData, let HttpClient set the boundary, so do NOT set Content-Type header manually

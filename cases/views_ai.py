@@ -26,6 +26,7 @@ class DocumentUploadAndIngestView(views.APIView):
     def post(self, request, *args, **kwargs):
         case_id = request.data.get('case_file')
         file_obj = request.FILES.get('file')
+        replace_doc_id = request.data.get('replace_doc_id')
 
         if not case_id or not file_obj:
             return Response(
@@ -41,41 +42,56 @@ class DocumentUploadAndIngestView(views.APIView):
             sha256.update(chunk)
         file_hash = sha256.hexdigest()
 
-        # 2. Check if this file has already been uploaded for this specific case
-        same_case_duplicate = LegalDocument.objects.filter(
-            case_file=case_file,
-            content_hash=file_hash
-        ).first()
+        if replace_doc_id:
+            # 2A. Update an existing document (Document Replacement / Versioning)
+            doc = get_object_or_404(LegalDocument, id=replace_doc_id, case_file=case_file)
+            
+            # If the replacement file has the exact same content, return existing doc
+            if doc.content_hash == file_hash:
+                serializer = LegalDocumentSerializer(doc)
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
-        if same_case_duplicate:
-            return Response(
-                {"error": f"Document '{file_obj.name}' has already been uploaded for this case."},
-                status=status.HTTP_409_CONFLICT
-            )
-
-        # 3. Check if file exists globally (uploaded by another case or lawyer)
-        global_duplicate = LegalDocument.objects.filter(content_hash=file_hash).first()
-
-        if global_duplicate:
-            # Create a database record referencing the existing file path
-            doc = LegalDocument.objects.create(
-                case_file=case_file,
-                file=global_duplicate.file,  # Points to the existing storage path
-                name=file_obj.name,
-                content_hash=file_hash,
-                indexed=False
-            )
+            doc.file = file_obj
+            doc.name = file_obj.name
+            doc.content_hash = file_hash
+            doc.indexed = False
+            doc.save()
         else:
-            # Save the new file normally
-            doc = LegalDocument.objects.create(
+            # 2B. Check if this exact file has already been uploaded for this specific case
+            same_case_duplicate = LegalDocument.objects.filter(
                 case_file=case_file,
-                file=file_obj,
-                name=file_obj.name,
-                content_hash=file_hash,
-                indexed=False
-            )
+                content_hash=file_hash
+            ).first()
 
-        # 4. Ingest file content into ChromaDB
+            if same_case_duplicate:
+                return Response(
+                    {"error": f"Document '{file_obj.name}' has already been uploaded for this case."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
+            # 3. Check if file exists globally (uploaded by another case or lawyer)
+            global_duplicate = LegalDocument.objects.filter(content_hash=file_hash).first()
+
+            if global_duplicate:
+                # Create a database record referencing the existing file path
+                doc = LegalDocument.objects.create(
+                    case_file=case_file,
+                    file=global_duplicate.file,  # Points to the existing storage path
+                    name=file_obj.name,
+                    content_hash=file_hash,
+                    indexed=False
+                )
+            else:
+                # Save the new file normally
+                doc = LegalDocument.objects.create(
+                    case_file=case_file,
+                    file=file_obj,
+                    name=file_obj.name,
+                    content_hash=file_hash,
+                    indexed=False
+                )
+
+        # 4. Ingest file content into ChromaDB with Content-Addressed Chunking
         file_path = doc.file.path
         if os.path.exists(file_path):
             try:
@@ -84,14 +100,16 @@ class DocumentUploadAndIngestView(views.APIView):
                 doc.indexed = True
                 doc.save()
             except Exception as e:
-                doc.delete()  # Clean up the DB record if ingestion fails
+                if not replace_doc_id:
+                    doc.delete()  # Clean up the DB record only if fresh ingestion fails
                 return Response(
                     {"error": f"Failed to ingest document: {str(e)}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
         serializer = LegalDocumentSerializer(doc)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        response_status = status.HTTP_200_OK if replace_doc_id else status.HTTP_201_CREATED
+        return Response(serializer.data, status=response_status)
 
 from io import BytesIO
 import re

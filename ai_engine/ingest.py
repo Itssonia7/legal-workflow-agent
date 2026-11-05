@@ -1,4 +1,5 @@
 import os
+import hashlib
 import tiktoken
 import chromadb
 from chromadb.utils import embedding_functions
@@ -29,7 +30,7 @@ def smart_extract_text(file_path: str) -> list[Document]:
 def process_legal_document(pdf_path, case_id=None, doc_id=None):
     print(f"Loading document: {pdf_path}...")
     
-    # Task 1: Load Document (Smart OCR Routing)
+    
     file_ext = pdf_path.lower().split('.')[-1]
     
     if file_ext in ['jpg', 'jpeg', 'png']:
@@ -38,14 +39,13 @@ def process_legal_document(pdf_path, case_id=None, doc_id=None):
         loader = PyPDFLoader(pdf_path)
         documents = loader.load()
         
-        # Scanned PDF Fallback
+       
         if not documents or not documents[0].page_content.strip():
             print("No text found in PDF. Assuming scanned, falling back to OCR...")
             documents = smart_extract_text(pdf_path)
     else:
         raise ValueError(f"Unsupported file type: {file_ext}")
     
-    # Task 2: Split using token-based counting & legal-aware separators
     encoder = tiktoken.get_encoding("cl100k_base")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=200,
@@ -71,7 +71,6 @@ def process_legal_document(pdf_path, case_id=None, doc_id=None):
     chunks = text_splitter.split_documents(documents)
     print(f"Successfully split into {len(chunks)} chunks.")
 
-    # Task 3: Save to ChromaDB using native client
     print("Saving to ChromaDB using native client...")
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DB_PATH = os.path.join(BASE_DIR, "chroma_db")
@@ -86,37 +85,60 @@ def process_legal_document(pdf_path, case_id=None, doc_id=None):
         metadata={"hnsw:space": "cosine"}
     )
     
-    # 1. Clean up existing chunks for this specific document ID (Idempotency check)
+    # 1. Fetch existing chunk IDs for this document (if updating an existing doc)
+    existing_ids = set()
     if doc_id:
-        collection.delete(where={"document_id": str(doc_id)})
+        try:
+            existing = collection.get(where={"document_id": str(doc_id)})
+            if existing and existing.get("ids"):
+                existing_ids = set(existing["ids"])
+        except Exception as e:
+            print(f"[Ingest] Notice checking existing chunks for doc_id {doc_id}: {e}")
         
-    # Prepare documents, metadatas, and ids
-    texts = [chunk.page_content for chunk in chunks]
-    
+    # 2. Build Content-Addressed Chunk IDs from individual chunk text hashes
+    texts = []
     metadatas = []
+    new_ids = []
+    
     for chunk in chunks:
+        clean_text = chunk.page_content.strip()
+        if not clean_text:
+            continue
+            
+        chunk_hash = hashlib.sha256(clean_text.encode("utf-8")).hexdigest()[:12]
+        if doc_id:
+            chunk_id = f"doc_{doc_id}_chunk_{chunk_hash}"
+        else:
+            chunk_id = f"doc_{os.path.basename(pdf_path)}_{chunk_hash}"
+            
+        texts.append(clean_text)
+        new_ids.append(chunk_id)
+        
         meta = {
             "source_type": "case_file",
-            "source_file": os.path.basename(pdf_path)
+            "source_file": os.path.basename(pdf_path),
+            "chunk_hash": chunk_hash
         }
         if case_id:
             meta["case_id"] = str(case_id)
         if doc_id:
             meta["document_id"] = str(doc_id)
         metadatas.append(meta)
-        
-    # Generate unique chunk IDs based on Document ID
-    if doc_id:
-        ids = [f"doc_chunk_{doc_id}_{i}" for i in range(len(chunks))]
-    else:
-        ids = [f"doc_{os.path.basename(pdf_path)}_{i}" for i in range(len(chunks))]
+
+    # 3. Incremental Upsert: ChromaDB preserves existing chunk vectors, embedding only new/modified chunks
+    if new_ids:
+        collection.upsert(
+            documents=texts,
+            metadatas=metadatas,
+            ids=new_ids
+        )
+        print(f"Upserted {len(new_ids)} content-addressed chunks into ChromaDB.")
     
-    # Add directly to native ChromaDB collection
-    collection.add(
-        documents=texts,
-        metadatas=metadatas,
-        ids=ids
-    )
+    # 4. Prune stale chunks that no longer exist in the updated revision
+    stale_ids = existing_ids - set(new_ids)
+    if stale_ids:
+        collection.delete(ids=list(stale_ids))
+        print(f"[Ingest] Pruned {len(stale_ids)} stale chunk(s) for Document ID {doc_id}.")
     
     print("Ingestion complete! Vectors stored in ./chroma_db")
 

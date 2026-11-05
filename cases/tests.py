@@ -143,3 +143,47 @@ class LegalDocumentDeduplicationTests(APITestCase):
 
         # Physical file should now be deleted since the reference count reached 0
         self.assertFalse(os.path.exists(doc_1_file_path))
+
+    @patch('chromadb.PersistentClient')
+    @patch('cases.views_ai.process_legal_document')
+    def test_document_replacement_versioning(self, mock_process, mock_chroma):
+        """
+        Verify that passing replace_doc_id updates the existing document
+        record, retains its doc_id, and invokes process_legal_document.
+        """
+        mock_collection = MagicMock()
+        mock_client = MagicMock()
+        mock_client.get_collection.return_value = mock_collection
+        mock_chroma.return_value = mock_client
+
+        # Initial upload
+        response_1 = self.api_client.post(
+            '/api/cases/documents/upload/',
+            {'case_file': self.case_a.id, 'file': self.uploaded_file},
+            format='multipart'
+        )
+        self.assertEqual(response_1.status_code, status.HTTP_201_CREATED)
+        doc_id = response_1.data['id']
+        mock_process.reset_mock()
+
+        # Modified content upload targeting the same doc_id (Replacement / Versioning)
+        modified_pdf = SimpleUploadedFile(
+            name="agreement_v2.pdf",
+            content=b"%PDF-1.4 ... modified pdf content with one word changed ...",
+            content_type="application/pdf"
+        )
+        response_2 = self.api_client.post(
+            '/api/cases/documents/upload/',
+            {'case_file': self.case_a.id, 'file': modified_pdf, 'replace_doc_id': doc_id},
+            format='multipart'
+        )
+        self.assertEqual(response_2.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_2.data['id'], doc_id)
+        
+        # Verify database record updated in place without creating new doc
+        updated_doc = LegalDocument.objects.get(id=doc_id)
+        self.assertEqual(updated_doc.name, "agreement_v2.pdf")
+        self.assertEqual(LegalDocument.objects.filter(case_file=self.case_a).count(), 1)
+        
+        # Verify ingest was called with updated file
+        mock_process.assert_called_once_with(updated_doc.file.path, str(self.case_a.id), doc_id)

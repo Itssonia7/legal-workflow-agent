@@ -18,6 +18,7 @@ export class DocumentVault implements OnInit {
   selectedFile: File | null = null;
   uploading = false;
   deletingId: number | null = null;
+  replacingDocId: number | null = null;
 
   constructor(private legalService: LegalService, private cdr: ChangeDetectorRef) {}
 
@@ -66,6 +67,47 @@ export class DocumentVault implements OnInit {
       error: (err) => {
         this.uploading = false;
         alert('Failed to upload/ingest document: ' + (err.error?.error || JSON.stringify(err.error)));
+      }
+    });
+  }
+
+  triggerReplace(doc: any): void {
+    this.replacingDocId = doc.id;
+    const replaceInput = document.getElementById('replaceFileInput') as HTMLInputElement;
+    if (replaceInput) {
+      replaceInput.value = '';
+      replaceInput.click();
+    }
+  }
+
+  onReplaceFileSelected(event: any): void {
+    const file: File = event.target.files[0];
+    if (!file || !this.replacingDocId) return;
+
+    const targetDoc = this.documents.find(d => d.id === this.replacingDocId);
+    if (!targetDoc) return;
+
+    const caseId = targetDoc.case_file;
+    const docId = targetDoc.id;
+    this.uploading = true;
+    this.cdr.detectChanges();
+
+    this.legalService.uploadDocument(caseId, file, docId).subscribe({
+      next: (updatedDoc) => {
+        const index = this.documents.findIndex(d => d.id === docId);
+        if (index !== -1) {
+          this.documents[index] = updatedDoc;
+        }
+        this.uploading = false;
+        this.replacingDocId = null;
+        alert(`Document "${updatedDoc.name}" updated successfully!\nChromaDB deduplication preserved unchanged chunks and updated modified vectors.`);
+        this.loadData();
+      },
+      error: (err) => {
+        this.uploading = false;
+        this.replacingDocId = null;
+        alert('Failed to update document: ' + (err.error?.error || JSON.stringify(err.error)));
+        this.cdr.detectChanges();
       }
     });
   }

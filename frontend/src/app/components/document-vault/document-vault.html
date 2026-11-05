@@ -92,17 +92,37 @@
                 </span>
               </td>
               <td class="py-4 text-right">
-                <button
-                  (click)="deleteDocument(doc)"
-                  [disabled]="deletingId === doc.id"
-                  title="Delete document and remove from Vector Vault"
-                  class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 inline-flex items-center gap-1 text-xs font-medium"
-                >
-                  <svg *ngIf="deletingId !== doc.id" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  <span *ngIf="deletingId === doc.id" class="text-xs text-red-500">Deleting...</span>
-                </button>
+                <div class="flex items-center justify-end gap-2">
+                  <!-- Replace / Update Document with Deduplication -->
+                  <button
+                    (click)="triggerReplace(doc)"
+                    [disabled]="uploading && replacingDocId === doc.id"
+                    title="Replace / Update PDF (Incremental Chunk Deduplication)"
+                    class="px-2.5 py-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition disabled:opacity-50 inline-flex items-center gap-1.5 text-xs font-semibold"
+                  >
+                    <svg *ngIf="!(uploading && replacingDocId === doc.id)" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <svg *ngIf="uploading && replacingDocId === doc.id" class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{{ (uploading && replacingDocId === doc.id) ? 'Updating...' : 'Update' }}</span>
+                  </button>
+
+                  <!-- Delete Document -->
+                  <button
+                    (click)="deleteDocument(doc)"
+                    [disabled]="deletingId === doc.id"
+                    title="Delete document and remove from Vector Vault"
+                    class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 inline-flex items-center gap-1 text-xs font-medium"
+                  >
+                    <svg *ngIf="deletingId !== doc.id" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span *ngIf="deletingId === doc.id" class="text-xs text-red-500">Deleting...</span>
+                  </button>
+                </div>
               </td>
             </tr>
             <tr *ngIf="documents.length === 0">
@@ -115,4 +135,12 @@
       </div>
     </div>
   </div>
+
+  <!-- Hidden file input triggered when clicking "Update" on a specific document row -->
+  <input 
+    type="file" 
+    id="replaceFileInput" 
+    (change)="onReplaceFileSelected($event)" 
+    accept=".pdf, .png, .jpg, .jpeg" 
+    class="hidden" />
 </div>
